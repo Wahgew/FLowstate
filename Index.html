@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="utf-8">
+    <title>FLowstate</title>
+    <style>
+        #gameWorld {
+            border: 1px solid black;
+            background: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+</head>
+<body style="background: #333;">
+    <canvas id="gameWorld" width="1920" height=950" tabindex="0" autofocus></canvas>
+    <script type="text/javascript" src="GameManger.js"></script>
+    <script type="text/javascript" src="Main.js"></script>
+    <script type="text/javascript" src="ResizeCanvas.js"></script>
+</body>
+</html>
