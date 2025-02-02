@@ -1,23 +1,44 @@
 class GameManager {
     constructor() {
+        this.songData = map;
+        this.songFile = this.songData.songPath;
+        this.music = new Audio(this.songFile);
+        this.music.loop = true; // Make the music loop
+        this.lanes = [];
+        this.noteSpawnTimers = [];
+
         this.canvas = null;
         this.ctx = null;
         this.isRunning = false;
         this.score = 0;
 
-        // Lane configuration
-        this.lanes = [
-            { x: 156, y: 0, key: 's', hitText: '' },
-            { x: 256, y: 0, key: 'd', hitText: '' },
-            { x: 356, y: 0, key: 'k', hitText: '' },
-            { x: 456, y: 0, key: 'l', hitText: '' },
-        ];
 
+        // // Initialize lanes and note spawn timers
+        // this.songData.sheet.forEach((laneData, index) => {
+        //     const lane = {
+        //         x: 0,
+        //         y: 0,
+        //         key: ['s', 'd', 'k', 'l'][index],
+        //         hitText: '',
+        //         notes: [] // Create a separate array to store the notes for each lane
+        //     };
+        //     this.lanes.push(lane);
+        //
+        //     laneData.notes.forEach(note => {
+        //         const timer = setTimeout(() => {
+        //             this.spawnNote(lane, note.delay);
+        //         }, note.delay * 1000); // Convert delay to milliseconds
+        //         this.noteSpawnTimers.push(timer);
+        //         //note.delay += 1; // Increase the delay by 1 second for each note
+        //     });
+        // });
+
+        // // Lane configuration
         // this.lanes = [
-        //     { x: 556, y: 0, key: 's', hitText: '' },
-        //     { x: 656, y: 0, key: 'd', hitText: '' },
-        //     { x: 756, y: 0, key: 'k', hitText: '' },
-        //     { x: 856, y: 0, key: 'l', hitText: '' }
+        //     { x: 0, y: 0, key: 's', hitText: '' },
+        //     { x: 0, y: 0, key: 'd', hitText: '' },
+        //     { x: 0, y: 0, key: 'k', hitText: '' },
+        //     { x: 0, y: 0, key: 'l', hitText: '' },
         // ];
 
         // Lane separators
@@ -38,33 +59,75 @@ class GameManager {
         this.hitTextDuration = 500; // Duration in milliseconds to show hit text
         this.hitTextTimers = new Map(); // Store timers for hit text
 
+        this.canvas = document.getElementById('gameWorld');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.drawStartMenu();
+        this.addEventListeners();
+
         // Load fonts
         document.fonts.load('20px nunito').then(() => {
-            this.initialize();
+            //this.initialize();
         })
     }
 
     initialize() {
-        this.canvas = document.getElementById('gameWorld');
-        this.ctx = this.canvas.getContext('2d');
+        // this.canvas = document.getElementById('gameWorld');
+        // this.ctx = this.canvas.getContext('2d');
 
         // Calculate lane positions based on the canvas width
-        const totalLaneWidth = this.laneWidth * this.lanes.length;
+        const totalLaneWidth = this.laneWidth * 4;
         const offsetX = (this.canvas.width - totalLaneWidth) / 2;
 
         this.laneStartX = offsetX; // lane start is 50px before first lane
+
+        // Initialize lanes and note spawn timers
+        this.songData.sheet.forEach((laneData, index) => {
+            const lane = {
+                x: offsetX + (index * this.laneWidth),
+                y: 0,
+                key: ['s', 'd', 'k', 'l'][index],
+                hitText: '',
+                notes: [] // Create a separate array to store the notes for each lane
+            };
+            this.lanes.push(lane);
+
+            laneData.notes.forEach(note => {
+                const timer = setTimeout(() => {
+                    this.spawnNote(lane, note.delay);
+                }, note.delay * 1000); // Convert delay to milliseconds
+                this.noteSpawnTimers.push(timer);
+                //note.delay += 1; // Increase the delay by 1 second for each note
+            });
+        });
 
         // Update the lane x positions based on the new canvas width
         this.lanes.forEach((lane, index) => {
             lane.x = offsetX + (index * this.laneWidth);
         });
 
-        this.addEventListeners();
+        //this.addEventListeners();
         this.isRunning = true;
         this.gameLoop();
     }
 
     addEventListeners() {
+        this.startClickListener = () => {
+            this.startGame();
+            this.canvas.removeEventListener('click', this.startClickListener);
+            document.removeEventListener('keydown', this.startKeyListener);
+        };
+        this.canvas.addEventListener('click', this.startClickListener);
+
+        this.startKeyListener = (event) => {
+            if (event.key === ' ') {
+                this.startGame();
+                this.canvas.removeEventListener('click', this.startClickListener);
+                document.removeEventListener('keydown', this.startKeyListener);
+            }
+        };
+        document.addEventListener('keydown', this.startKeyListener);
+
         const pressedKeys = new Set();
 
         document.addEventListener('keydown', (event) => {
@@ -86,25 +149,27 @@ class GameManager {
     }
 
     handleNoteHit(lane) {
-        // Calculate distance from perfect hit
-        const distance = Math.abs(lane.y - this.hitZoneY);
+        // Find the note that is closest to the hit zone
+        const note = lane.notes.find(note => Math.abs(note.y - this.hitZoneY) <= this.goodWindow);
 
-        if (distance <= this.perfectWindow) {
-            this.showHitText(lane, 'PERFECT', '#00ff00');
-            this.score += 300;
-        } else if (distance <= this.goodWindow) {
-            this.showHitText(lane, 'GOOD', '#ffff00');
-            this.score += 150;
-        } else if (distance <= this.hitZoneRadius + this.noteRadius) {
-            this.showHitText(lane, 'BAD', '#ff0000');
-            this.score += 50;
-        } else {
-            // Note wasn't in hit range at all
-            return;
+        if (note) {
+            // Calculate distance from perfect hit
+            const distance = Math.abs(note.y - this.hitZoneY);
+
+            if (distance <= this.perfectWindow) {
+                this.showHitText(lane, 'PERFECT', '#00ff00');
+                this.score += 300;
+            } else if (distance <= this.goodWindow) {
+                this.showHitText(lane, 'GOOD', '#ffff00');
+                this.score += 150;
+            } else {
+                this.showHitText(lane, 'BAD', '#ff0000');
+                this.score += 50;
+            }
+
+            // Remove the note from the lane
+            lane.notes.splice(lane.notes.indexOf(note), 1);
         }
-
-        // Reset note to top after hit
-        lane.y = 0;
     }
 
     showHitText(lane, text, color) {
@@ -153,14 +218,15 @@ class GameManager {
         this.ctx.fillStyle = 'white';
 
         this.lanes.forEach(lane => {
-            // Calculate the center of the lane
-            const centerX = lane.x + (this.laneWidth / 2);
-
-            this.ctx.beginPath();
-            this.ctx.arc(centerX, lane.y, this.noteRadius, 0, Math.PI * 2);
-            this.ctx.fill();
+            // Draw each note in the lane
+            lane.notes.forEach(note => {
+                this.ctx.beginPath();
+                this.ctx.arc(note.x + (this.laneWidth / 2), note.y, this.noteRadius, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
         });
     }
+
 
     drawHitText() {
         this.ctx.textAlign = 'center';
@@ -219,20 +285,59 @@ class GameManager {
 
     update() {
         this.lanes.forEach(lane => {
-            lane.y += 2; // fall speed
+            // Update the y position of each note in the lane
+            lane.notes.forEach(note => {
+                note.y += 2; // fall speed
 
-            if (lane.y > this.canvas.height) {
-                lane.y = 200;
-                this.showHitText(lane, 'MISS', '#ff0000');
-            }
+                // Remove the note from the lane if it has fallen off the screen
+                if (note.y > this.canvas.height) {
+                    lane.notes.splice(lane.notes.indexOf(note), 1);
+                    this.showHitText(lane, 'MISS', '#ff0000');
+                }
+            });
         });
     }
+
 
     gameLoop() {
         if (!this.isRunning) return;
         this.update();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
+    }
+
+    spawnNote(lane, delay) {
+        // Create a new note object
+        const note = {
+            x: lane.x,
+            y: -delay * 100, // Calculate the initial y position based on the delay
+            key: lane.key
+        };
+
+        // Add the note to the lane's notes array
+        lane.notes.push(note);
+    }
+
+    drawStartMenu() {
+        this.ctx.fillStyle = 'black';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '30px nunito';
+        this.ctx.textAlign = 'center';
+
+        const startX = this.canvas.width / 2;
+        const startY = this.canvas.height / 2;
+
+        this.ctx.fillText('Start', startX, startY);
+    }
+
+    startGame() {
+        this.music.play().then(() => {
+            this.initialize();
+        }).catch((error) => {
+            console.error('Error playing music:', error);
+        });
     }
 }
 
