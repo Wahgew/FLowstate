@@ -7,11 +7,18 @@ class GameManager {
 
         // Lane configuration
         this.lanes = [
-            { x: 556, y: 0, key: 's', hitText: '' },
-            { x: 656, y: 0, key: 'd', hitText: '' },
-            { x: 756, y: 0, key: 'k', hitText: '' },
-            { x: 856, y: 0, key: 'l', hitText: '' }
+            { x: 156, y: 0, key: 's', hitText: '' },
+            { x: 256, y: 0, key: 'd', hitText: '' },
+            { x: 356, y: 0, key: 'k', hitText: '' },
+            { x: 456, y: 0, key: 'l', hitText: '' },
         ];
+
+        // this.lanes = [
+        //     { x: 556, y: 0, key: 's', hitText: '' },
+        //     { x: 656, y: 0, key: 'd', hitText: '' },
+        //     { x: 756, y: 0, key: 'k', hitText: '' },
+        //     { x: 856, y: 0, key: 'l', hitText: '' }
+        // ];
 
         // Lane separators
         this.laneWidth = 100;
@@ -24,7 +31,7 @@ class GameManager {
         this.noteRadius = 20;
 
         // Hit detection configuration
-        this.perfectWindow = 20;  // ±15 pixels from center for PERFECT
+        this.perfectWindow = 15;  // ±20 pixels from center for PERFECT
         this.goodWindow = 40;     // ±40 pixels from center for GOOD
 
         // Hit text display configuration
@@ -45,7 +52,7 @@ class GameManager {
         const totalLaneWidth = this.laneWidth * this.lanes.length;
         const offsetX = (this.canvas.width - totalLaneWidth) / 2;
 
-        this.laneStartX = offsetX - 50; // lane start is 50px before first lane
+        this.laneStartX = offsetX; // lane start is 50px before first lane
 
         // Update the lane x positions based on the new canvas width
         this.lanes.forEach((lane, index) => {
@@ -58,10 +65,22 @@ class GameManager {
     }
 
     addEventListeners() {
+        const pressedKeys = new Set();
+
         document.addEventListener('keydown', (event) => {
+            if (!pressedKeys.has(event.key)) {
+                const pressedLane = this.lanes.find(lane => lane.key === event.key);
+                if (pressedLane) {
+                    this.handleNoteHit(pressedLane);
+                    pressedKeys.add(event.key);
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
             const pressedLane = this.lanes.find(lane => lane.key === event.key);
             if (pressedLane) {
-                this.handleNoteHit(pressedLane);
+                pressedKeys.delete(event.key);
             }
         });
     }
@@ -112,38 +131,46 @@ class GameManager {
 
         // Draw outer hit zones
         this.lanes.forEach(lane => {
+            // Calculate the center of the lane
+            const centerX = lane.x + (this.laneWidth / 2);
+
             // Draw GOOD hit zone (larger, dimmer)
             this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
             this.ctx.beginPath();
-            this.ctx.arc(lane.x, this.hitZoneY, this.goodWindow, 0, Math.PI * 2);
+            this.ctx.arc(centerX, this.hitZoneY, this.goodWindow, 0, Math.PI * 2);
             this.ctx.stroke();
 
             // Draw PERFECT hit zone (smaller, brighter)
             this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
             this.ctx.beginPath();
-            this.ctx.arc(lane.x, this.hitZoneY, this.perfectWindow, 0, Math.PI * 2);
+            this.ctx.arc(centerX, this.hitZoneY, this.perfectWindow, 0, Math.PI * 2);
             this.ctx.stroke();
         });
     }
+
 
     drawNotes() {
         this.ctx.fillStyle = 'white';
 
         this.lanes.forEach(lane => {
+            // Calculate the center of the lane
+            const centerX = lane.x + (this.laneWidth / 2);
+
             this.ctx.beginPath();
-            this.ctx.arc(lane.x, lane.y, this.noteRadius, 0, Math.PI * 2);
+            this.ctx.arc(centerX, lane.y, this.noteRadius, 0, Math.PI * 2);
             this.ctx.fill();
         });
     }
 
     drawHitText() {
         this.ctx.textAlign = 'center';
-        this.ctx.font = 'bold 24px nunito';
+        this.ctx.font = 'bold 15px nunito'; // Change font size to 36px
 
         this.lanes.forEach(lane => {
             if (lane.hitText) {
+                const centerX = lane.x + (this.laneWidth / 2);
                 this.ctx.fillStyle = lane.hitTextColor;
-                this.ctx.fillText(lane.hitText, lane.x, this.hitZoneY - 50);
+                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 50);
             }
         });
 
@@ -179,13 +206,14 @@ class GameManager {
         // Draw score
         this.ctx.fillStyle = 'white';
         this.ctx.font = '20px nunito';
-        this.ctx.fillText('Your Score:', this.canvas.width - 150, 50);
-        this.ctx.fillText(this.score, this.canvas.width - 150, 75);
+        this.ctx.fillText('Your Score:', this.canvas.width - 125, 25);
+        this.ctx.fillText(this.score, this.canvas.width - 80, 60);
 
         // Draw key hints
-        this.ctx.font = '16px nunito';
+        this.ctx.font = '15px nunito';
         this.lanes.forEach(lane => {
-            this.ctx.fillText(lane.key.toUpperCase(), lane.x - 5, this.hitZoneY + 60);
+            const centerX = lane.x + (this.laneWidth / 2);
+            this.ctx.fillText(lane.key.toUpperCase(), centerX - 5, this.hitZoneY + 60);
         });
     }
 
@@ -194,7 +222,7 @@ class GameManager {
             lane.y += 2; // fall speed
 
             if (lane.y > this.canvas.height) {
-                lane.y = 0;
+                lane.y = 200;
                 this.showHitText(lane, 'MISS', '#ff0000');
             }
         });
