@@ -52,7 +52,7 @@ class GameManager {
         this.noteRadius = 20;
 
         // Hit detection configuration
-        this.perfectWindow = 15;  // ±20 pixels from center for PERFECT
+        this.perfectWindow = 16;  // ±20 pixels from center for PERFECT
         this.goodWindow = 40;     // ±40 pixels from center for GOOD
 
         // Hit text display configuration

@@ -93,7 +93,57 @@ const map = {
                 {delay: 33.7},
                 {delay: 35.7},
                 {delay: 35.8},
-                {delay: 35.9}
+                {delay: 35.9},
+
+
+                {delay: 38.1},
+                {delay: 38.2},
+                {delay: 38.3},
+                {delay: 40.5},
+                {delay: 40.6},
+                {delay: 40.7},
+                {delay: 42.7},
+                {delay: 42.8},
+                {delay: 42.9},
+
+                {delay: 45.1},
+                {delay: 45.2},
+                {delay: 45.3},
+
+                {delay: 47.5},
+                {delay: 47.6},
+                {delay: 47.7},
+
+                {delay: 49.5},
+                {delay: 49.6},
+                {delay: 49.7},
+
+                {delay: 52.1},
+                {delay: 52.2},
+                {delay: 52.3},
+
+                //ending
+                {delay: 53.5},
+                {delay: 53.6},
+
+                {delay: 53.8},
+                {delay: 54},
+
+                {delay: 54.2},
+                {delay: 54.3},
+
+
+                {delay: 55.6},
+                {delay: 55.7},
+
+                {delay: 56},
+                {delay: 56.1},
+
+                {delay: 56.4},
+                {delay: 56.5},
+
+                {delay: 56.8},
+                {delay: 56.9},
             ]
         },
         {
@@ -157,6 +207,60 @@ const map = {
                 {delay: 34.5},
                 {delay: 34.6},
                 {delay: 34.7},
+                {delay: 37.1},
+                {delay: 37.2},
+                {delay: 37.3},
+
+                {delay: 39.1},
+                {delay: 39.2},
+                {delay: 39.3},
+
+                {delay: 41.5},
+                {delay: 41.6},
+                {delay: 41.7},
+
+                {delay: 43.7},
+                {delay: 43.8},
+                {delay: 43.9},
+
+                {delay: 46.1},
+                {delay: 46.2},
+                {delay: 46.3},
+
+                {delay: 48.5},
+                {delay: 48.6},
+                {delay: 48.7},
+
+                {delay: 50.7},
+                {delay: 50.8},
+                {delay: 50.9},
+
+                {delay: 53.1},
+                {delay: 53.2},
+                {delay: 53.3},
+
+                //ending
+                {delay: 53.5},
+                {delay: 53.6},
+
+                {delay: 53.8},
+                {delay: 54},
+
+                {delay: 54.2},
+                {delay: 54.3},
+
+
+                {delay: 55.6},
+                {delay: 55.7},
+
+                {delay: 56},
+                {delay: 56.1},
+
+                {delay: 56.4},
+                {delay: 56.5},
+
+                {delay: 56.8},
+                {delay: 56.9},
             ]
         },
         {
@@ -220,6 +324,60 @@ const map = {
                 {delay: 34.5},
                 {delay: 34.6},
                 {delay: 34.7},
+                {delay: 37.1},
+                {delay: 37.2},
+                {delay: 37.3},
+
+                {delay: 39.1},
+                {delay: 39.2},
+                {delay: 39.3},
+
+                {delay: 41.5},
+                {delay: 41.6},
+                {delay: 41.7},
+
+                {delay: 43.7},
+                {delay: 43.8},
+                {delay: 43.9},
+
+                {delay: 46.1},
+                {delay: 46.2},
+                {delay: 46.3},
+
+                {delay: 48.5},
+                {delay: 48.6},
+                {delay: 48.7},
+
+                {delay: 50.7},
+                {delay: 50.8},
+                {delay: 50.9},
+
+                {delay: 53.1},
+                {delay: 53.2},
+                {delay: 53.3},
+
+                //ending
+                {delay: 53.5},
+                {delay: 53.6},
+
+                {delay: 53.8},
+                {delay: 54},
+
+                {delay: 54.2},
+                {delay: 54.3},
+
+
+                {delay: 55.6},
+                {delay: 55.7},
+
+                {delay: 56},
+                {delay: 56.1},
+
+                {delay: 56.4},
+                {delay: 56.5},
+
+                {delay: 56.8},
+                {delay: 56.9},
             ]
         },
         {
@@ -283,6 +441,56 @@ const map = {
                 {delay: 35.7},
                 {delay: 35.8},
                 {delay: 35.9},
+
+
+                {delay: 38.1},
+                {delay: 38.2},
+                {delay: 38.3},
+                {delay: 40.5},
+                {delay: 40.6},
+                {delay: 40.7},
+                {delay: 42.7},
+                {delay: 42.8},
+                {delay: 42.9},
+
+                {delay: 45.1},
+                {delay: 45.2},
+                {delay: 45.3},
+
+                {delay: 47.5},
+                {delay: 47.6},
+                {delay: 47.7},
+
+                {delay: 49.5},
+                {delay: 49.6},
+                {delay: 49.7},
+
+                {delay: 52.1},
+                {delay: 52.2},
+                {delay: 52.3},
+
+                //ending
+                {delay: 53.5},
+                {delay: 53.6},
+
+                {delay: 53.8},
+                {delay: 54},
+
+                {delay: 54.2},
+                {delay: 54.3},
+
+
+                {delay: 55.6},
+                {delay: 55.7},
+
+                {delay: 56},
+                {delay: 56.1},
+
+                {delay: 56.4},
+                {delay: 56.5},
+
+                {delay: 56.8},
+                {delay: 56.9},
             ]
         }
     ]
