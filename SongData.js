@@ -45,6 +45,27 @@ const map = {
                 {delay: 5.5},
                 {delay: 6.3},
 
+                //left
+                {delay: 6.5},
+                {delay: 7.3},
+                {delay: 8.1},
+
+                //right
+                {delay: 9.5},
+                {delay: 10.3},
+                {delay: 11.1},
+
+
+                //left
+                {delay: 11.3},
+                {delay: 12.1},
+                {delay: 12.9},
+
+                //right
+                {delay: 14.3},
+                {delay: 15.1},
+                {delay: 15.9},
+
                 // Chorus
                 {delay: 17.5},
                 {delay: 17.6},
@@ -58,6 +79,21 @@ const map = {
                 {delay: 24.2},
                 {delay: 24.3},
                 {delay: 24.4},
+                {delay: 26.5},
+                {delay: 26.6},
+                {delay: 26.7},
+                {delay: 29.1},
+                {delay: 29.2},
+                {delay: 29.3},
+                {delay: 31.1},
+                {delay: 31.2},
+                {delay: 31.3},
+                {delay: 33.5},
+                {delay: 33.6},
+                {delay: 33.7},
+                {delay: 35.7},
+                {delay: 35.8},
+                {delay: 35.9}
             ]
         },
         {
@@ -73,6 +109,26 @@ const map = {
                 {delay: 5.3},
                 {delay: 6.1},
 
+                //left
+                {delay: 6.7},
+                {delay: 7.5},
+                {delay: 8.3},
+
+                //right
+                {delay: 9.3},
+                {delay: 10.1},
+                {delay: 10.9},
+
+                //left
+                {delay: 11.5},
+                {delay: 12.3},
+                {delay: 13.1},
+
+                //right
+                {delay: 14.1},
+                {delay: 14.9},
+                {delay: 15.7},
+
                 // Chorus
                 {delay: 16.5},
                 {delay: 16.6},
@@ -86,6 +142,21 @@ const map = {
                 {delay: 23.1},
                 {delay: 23.2},
                 {delay: 23.3},
+                {delay: 25.5},
+                {delay: 25.6},
+                {delay: 25.7},
+                {delay: 27.7},
+                {delay: 27.8},
+                {delay: 27.9},
+                {delay: 30.1},
+                {delay: 30.2},
+                {delay: 30.3},
+                {delay: 32.5},
+                {delay: 32.6},
+                {delay: 32.7},
+                {delay: 34.5},
+                {delay: 34.6},
+                {delay: 34.7},
             ]
         },
         {
@@ -101,6 +172,26 @@ const map = {
                 {delay: 5.1},
                 {delay: 5.9},
 
+                //left
+                {delay: 6.9},
+                {delay: 7.7},
+                {delay: 8.5},
+
+                //right
+                {delay: 9.1},
+                {delay: 9.9},
+                {delay: 10.7},
+
+                //left
+                {delay: 11.7},
+                {delay: 12.5},
+                {delay: 13.3},
+
+                //right
+                {delay: 13.9},
+                {delay: 14.7},
+                {delay: 15.5},
+
                 // Chorus
                 {delay: 16.5},
                 {delay: 16.6},
@@ -114,6 +205,21 @@ const map = {
                 {delay: 23.1},
                 {delay: 23.2},
                 {delay: 23.3},
+                {delay: 25.5},
+                {delay: 25.6},
+                {delay: 25.7},
+                {delay: 27.7},
+                {delay: 27.8},
+                {delay: 27.9},
+                {delay: 30.1},
+                {delay: 30.2},
+                {delay: 30.3},
+                {delay: 32.5},
+                {delay: 32.6},
+                {delay: 32.7},
+                {delay: 34.5},
+                {delay: 34.6},
+                {delay: 34.7},
             ]
         },
         {
@@ -121,13 +227,33 @@ const map = {
             notes: [
                 //left
                 {delay: 2.4},
-                {delay: 3.1},
+                {delay: 3.2},
                 {delay: 3.9},
 
                 //right
                 {delay: 4.1},
                 {delay: 4.9},
                 {delay: 5.7},
+
+                //left
+                {delay: 7.1},
+                {delay: 7.9},
+                {delay: 8.7},
+
+                //right
+                {delay: 8.9},
+                {delay: 9.7},
+                {delay: 10.5},
+
+                //left
+                {delay: 11.9},
+                {delay: 12.7},
+                {delay: 13.5},
+
+                //right
+                {delay: 13.7},
+                {delay: 14.5},
+                {delay: 15.3},
 
                 // Chorus
                 {delay: 17.5},
@@ -142,6 +268,21 @@ const map = {
                 {delay: 24.2},
                 {delay: 24.3},
                 {delay: 24.4},
+                {delay: 26.5},
+                {delay: 26.6},
+                {delay: 26.7},
+                {delay: 29.1},
+                {delay: 29.2},
+                {delay: 29.3},
+                {delay: 31.1},
+                {delay: 31.2},
+                {delay: 31.3},
+                {delay: 33.5},
+                {delay: 33.6},
+                {delay: 33.7},
+                {delay: 35.7},
+                {delay: 35.8},
+                {delay: 35.9},
             ]
         }
     ]
