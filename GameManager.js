@@ -1,6 +1,6 @@
 class GameManager {
-    constructor() {
-        this.songData = map;
+    constructor(songData = null) {
+        this.songData = songData || map;
         this.songFile = this.songData.songPath;
         this.music = new Audio(this.songFile);
         this.music.loop = true; // Make the music loop
@@ -11,35 +11,8 @@ class GameManager {
         this.ctx = null;
         this.isRunning = false;
         this.score = 0;
-
-
-        // // Initialize lanes and note spawn timers
-        // this.songData.sheet.forEach((laneData, index) => {
-        //     const lane = {
-        //         x: 0,
-        //         y: 0,
-        //         key: ['s', 'd', 'k', 'l'][index],
-        //         hitText: '',
-        //         notes: [] // Create a separate array to store the notes for each lane
-        //     };
-        //     this.lanes.push(lane);
-        //
-        //     laneData.notes.forEach(note => {
-        //         const timer = setTimeout(() => {
-        //             this.spawnNote(lane, note.delay);
-        //         }, note.delay * 1000); // Convert delay to milliseconds
-        //         this.noteSpawnTimers.push(timer);
-        //         //note.delay += 1; // Increase the delay by 1 second for each note
-        //     });
-        // });
-
-        // // Lane configuration
-        // this.lanes = [
-        //     { x: 0, y: 0, key: 's', hitText: '' },
-        //     { x: 0, y: 0, key: 'd', hitText: '' },
-        //     { x: 0, y: 0, key: 'k', hitText: '' },
-        //     { x: 0, y: 0, key: 'l', hitText: '' },
-        // ];
+        this.bpm = this.songData.bpm || 120;
+        this.noteSpeed = (this.bpm / 120) * 2;
 
         // Lane separators
         this.laneWidth = 100;
@@ -54,6 +27,9 @@ class GameManager {
         // Hit detection configuration
         this.perfectWindow = 16;  // ±20 pixels from center for PERFECT
         this.goodWindow = 40;     // ±40 pixels from center for GOOD
+        this.badWindow = 80;
+        this.missThreshold = 100;
+
 
         // Hit text display configuration
         this.hitTextDuration = 500; // Duration in milliseconds to show hit text
@@ -149,26 +125,42 @@ class GameManager {
     }
 
     handleNoteHit(lane) {
-        // Find the note that is closest to the hit zone
-        const note = lane.notes.find(note => Math.abs(note.y - this.hitZoneY) <= this.goodWindow);
+        if (!lane.notes.length) {
+            return; // No feedback if no notes in lane
+        }
 
-        if (note) {
-            // Calculate distance from perfect hit
+        // Find the note closest to the hit zone
+        let closestNote = null;
+        let closestDistance = Infinity;
+        let closestIndex = -1;
+
+
+        // Find the earliest note in the lane that's within the hit window
+        lane.notes.forEach((note, index) => {
             const distance = Math.abs(note.y - this.hitZoneY);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestNote = note;
+                closestIndex = index;
+            }
+        });
 
-            if (distance <= this.perfectWindow) {
+        // Only judge hit if the closest note is within the bad window
+        if (closestNote && closestDistance <= this.badWindow) {
+            // Judge the hit based on distance
+            if (closestDistance <= this.perfectWindow) {
                 this.showHitText(lane, 'PERFECT', '#00ff00');
                 this.score += 300;
-            } else if (distance <= this.goodWindow) {
+                lane.notes.splice(closestIndex, 1);
+            } else if (closestDistance <= this.goodWindow) {
                 this.showHitText(lane, 'GOOD', '#ffff00');
                 this.score += 150;
-            } else {
-                this.showHitText(lane, 'BAD', '#ff0000');
+                lane.notes.splice(closestIndex, 1);
+            } else if (closestDistance <= this.badWindow) {
+                this.showHitText(lane, 'BAD', '#ff6666');
                 this.score += 50;
+                lane.notes.splice(closestIndex, 1);
             }
-
-            // Remove the note from the lane
-            lane.notes.splice(lane.notes.indexOf(note), 1);
         }
     }
 
@@ -198,6 +190,12 @@ class GameManager {
         this.lanes.forEach(lane => {
             // Calculate the center of the lane
             const centerX = lane.x + (this.laneWidth / 2);
+
+            // Draw BAD hit zone (largest, dimmest)
+            this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.2)';
+            this.ctx.beginPath();
+            this.ctx.arc(centerX, this.hitZoneY, this.badWindow, 0, Math.PI * 2);
+            this.ctx.stroke();
 
             // Draw GOOD hit zone (larger, dimmer)
             this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
@@ -285,19 +283,19 @@ class GameManager {
 
     update() {
         this.lanes.forEach(lane => {
-            // Update the y position of each note in the lane
-            lane.notes.forEach(note => {
-                note.y += 2; // fall speed
+            // Use for...of to safely modify array while iterating
+            for (let i = lane.notes.length - 1; i >= 0; i--) {
+                const note = lane.notes[i];
+                note.y += note.speed || this.noteSpeed;
 
-                // Remove the note from the lane if it has fallen off the screen
-                if (note.y > this.canvas.height) {
-                    lane.notes.splice(lane.notes.indexOf(note), 1);
+                // Check if note has passed the miss threshold
+                if (note.y > this.hitZoneY + this.missThreshold) {
                     this.showHitText(lane, 'MISS', '#ff0000');
+                    lane.notes.splice(i, 1);
                 }
-            });
+            }
         });
     }
-
 
     gameLoop() {
         if (!this.isRunning) return;
@@ -307,14 +305,19 @@ class GameManager {
     }
 
     spawnNote(lane, delay) {
-        // Create a new note object
+        const scrollTime = 4; // Increased time for notes to reach hit zone
+        const spawnY = -50; // Spawn notes just above the visible area
+
+        // Calculate note speed based on BPM
+        const noteSpeed = (this.bpm / 120) * 2;
+
         const note = {
             x: lane.x,
-            y: -delay * 100, // Calculate the initial y position based on the delay
-            key: lane.key
+            y: spawnY,
+            delay: delay,
+            speed: noteSpeed
         };
 
-        // Add the note to the lane's notes array
         lane.notes.push(note);
     }
 
