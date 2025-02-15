@@ -1,7 +1,6 @@
 class OsuParser {
     constructor() {
         this.bpm = 0;
-        this.offset = 0;
         this.hitObjects = [];
     }
 
@@ -11,7 +10,7 @@ class OsuParser {
 
         const songData = {
             general: {
-                AudioFilename: undefined
+                AudioFilename: undefined,
             },
             timingPoints: [],
             hitObjects: []
@@ -57,17 +56,19 @@ class OsuParser {
     }
 
     parseTimingPoint(line) {
-        const [time, beatLength, ...rest] = line.split(',');
+        const [time, beatLength, meter, sampleSet, sampleIndex, volume, uninherited, effects] = line.split(',');
         return {
             time: parseFloat(time),
             beatLength: parseFloat(beatLength),
-            // Convert beat length to BPM
-            bpm: 60000 / parseFloat(beatLength)
+            meter: parseInt(meter),
+            uninherited: parseInt(uninherited),
+            // Calculate BPM from beat length (ms per beat)
+            bpm: uninherited === '1' ? 60000 / parseFloat(beatLength) : null
         };
     }
 
     parseHitObject(line) {
-        const [x, y, time, type, ...rest] = line.split(',');
+        const [x, y, time, type] = line.split(',');
         return {
             x: parseInt(x),
             y: parseInt(y),
@@ -77,41 +78,58 @@ class OsuParser {
     }
 
     convertToGameFormat(osuData) {
-        // Initialize 4 lanes (S, D, K, L)
+        // Get base timing point
+        const baseTimingPoint = osuData.timingPoints.find(tp => tp.uninherited === 1);
+        const msPerBeat = baseTimingPoint ? baseTimingPoint.beatLength : 666.666667;
+        const bpm = 60000 / msPerBeat;
+
+        // Calculate game-specific timing parameters
+        const scrollSpeed = 10; // Match your original speed
+        const hitLineY = 900;
+        const spawnY = -100;
+        const distanceToTravel = hitLineY - spawnY;
+
+        // Calculate how many milliseconds it takes for a note to reach the hit line
+        // at our given scroll speed (12 pixels per frame at 60fps)
+        const travelTimeMs = (distanceToTravel / (scrollSpeed * 60)) * 1000;
+
+        // Initialize 4 lanes
         const lanes = Array(4).fill(null).map(() => ({ notes: [] }));
 
-        // Get base timing point for BPM calculation
-        const baseTimingPoint = osuData.timingPoints[0];
-        const baseBPM = baseTimingPoint ? baseTimingPoint.bpm : 90; // Default to 120 BPM if not specified
-        const offset = baseTimingPoint ? baseTimingPoint.time / 1000 : 0; // Convert to seconds
-
-        // Convert hit objects to lane notes
-        // Add a manual offset adjustment (in seconds)
-        const manualOffset = -2; // Adjust this value as needed
-
-        // Convert hit objects to lane notes
+        // Process hit objects
         for (const hitObject of osuData.hitObjects) {
-            const laneIndex = Math.floor((hitObject.x / 512) * 4);
+            const laneIndex = Math.min(3, Math.floor((hitObject.x / 512) * 4));
+
             if (laneIndex >= 0 && laneIndex < 4) {
-                const delay = (hitObject.time / 1000) - offset + manualOffset;
+                // Calculate spawn time by subtracting travel time from hit time
+                const hitTimeMs = hitObject.time;
+                const spawnTimeMs = Math.max(0, hitTimeMs - travelTimeMs);
 
                 lanes[laneIndex].notes.push({
-                    delay: delay,
-                    window: (60 / baseBPM) * 0.2
+                    delay: spawnTimeMs / 1000, // Convert to seconds for setTimeout
+                    hitTime: hitTimeMs / 1000,  // Convert to seconds for game logic
+                    speed: scrollSpeed,
+                    debugInfo: {
+                        originalTime: hitTimeMs,
+                        spawnOffset: travelTimeMs
+                    }
                 });
             }
         }
 
         return {
             songPath: `songs/${osuData.general.AudioFilename}`,
-            bpm: baseBPM,
-            offset: offset + manualOffset, // Include manual offset in returned data
+            bpm: bpm,
+            msPerBeat: msPerBeat,
+            scrollSpeed: scrollSpeed,
+            spawnOffset: spawnY,
+            hitLineY: hitLineY,
             sheet: lanes
         };
     }
+
 }
 
-// Usage example:
 function loadOsuFile(fileContent) {
     const parser = new OsuParser();
     return parser.parseOsuFile(fileContent);
