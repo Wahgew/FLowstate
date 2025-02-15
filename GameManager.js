@@ -44,7 +44,7 @@ class GameManager {
 
         // Calculate fall distance and speed
         this.spawnY = -100; // Starting Y position
-        this.hitZoneY = 900; // optimal position for hit zones (based on 10ms allowance)
+        this.hitZoneY = 970; // optimal position for hit zones (based on 10ms allowance)
         this.distanceToHitLine = this.hitZoneY - this.spawnY;
 
         // Calculate approach time based on AR
@@ -58,22 +58,44 @@ class GameManager {
         this.laneStartX = 0;  // Will be calculated in initialize()
 
         // Gameplay configuration
-        this.laneWidth = 120;
-        this.noteRadius = 40;
-        this.visualHitZoneY = 805;  // Position for visual feedback only
+        this.laneWidth = 130;
+        this.noteRadius = 50;
+        this.visualHitZoneY = 860;  // Position for visual feedback only
 
         this.score = 0;
+        this.currentCombo = 0;
         this.isRunning = false;
 
         this.hitTextDuration = 500;
         this.hitTextTimers = new Map();
 
+        // Track pressed keys for visual feedback
+        this.pressedKeys = new Set();
+
+        // Create audio elements for each lane
+        this.hitSounds = new Map();
+
+        // Initialize volume settings
+        this.hitSoundVolume = 0.5;  // Default hit sound volume
+        this.songVolume = 0.5;      // Default song volume
+
+        // Set initial song volume
+        if (this.music) {
+            this.music.volume = this.songVolume;
+        }
+
+        // Initialize hit sounds for each lane
+        ['s', 'd', 'k', 'l'].forEach(key => {
+            const audio = new Audio('./effects/hitsound.wav');
+            audio.volume = this.hitSoundVolume;
+            this.hitSounds.set(key, audio);
+        });
+
         // Timing windows for hit detection (in milliseconds)
         this.timingWindows = {
-            perfect: 30,    // ±20ms for PERFECT
-            good: 60,      // ±120ms for GOOD
-            bad: 100,       // ±300ms for BAD
-            miss: 600       // ±600ms for MISS
+            perfect: 35,    // ±20ms for PERFECT
+            good: 70,      // ±120ms for GOOD
+            bad: 120,       // ±100ms for BAD
         };
 
         // spawn time distance
@@ -108,7 +130,7 @@ class GameManager {
             noteSpeed: this.noteSpeed,
         });
 
-        this.drawStartMenu();
+        this.initializeStartMenu();
         this.addEventListeners();
     }
 
@@ -144,6 +166,22 @@ class GameManager {
         this.isRunning = true;
         this.lastFrameTime = performance.now();
         this.gameLoop(this.lastFrameTime);
+    }
+
+    // handle font loading and start menu initialization
+    async initializeStartMenu() {
+        try {
+            // Wait for font to load
+            await document.fonts.load('20px Nunito');
+            console.log('Nunito font loaded successfully');
+
+            // Now draw the start menu
+            this.drawStartMenu();
+        } catch (error) {
+            console.error('Error loading font:', error);
+            // Fallback to draw start menu anyway
+            this.drawStartMenu();
+        }
     }
 
     // Update preloadTimingData to keep times in seconds
@@ -211,27 +249,21 @@ class GameManager {
 
         // Single event listener for all keyboard events
         document.addEventListener('keydown', (event) => {
-            // Handle F2 for debug mode toggle
+            // Handle F2 for debug mode
             if (event.key === 'F2') {
                 if (!this.gameStarted) {
                     this.toggleDebugMode();
-                    console.log('Debug mode toggled:', {
-                        debugMode: this.debugMode,
-                        autoPlay: this.autoPlay,
-                        gameStarted: this.gameStarted
-                    });
                 }
                 return;
             }
 
             // Only process gameplay keys if not in auto-play
             if (!this.autoPlay) {
-                if (!pressedKeys.has(event.key)) {
-                    const pressedLane = this.lanes.find(lane => lane.key === event.key);
-                    if (pressedLane) {
-                        this.handleNoteHit(pressedLane);
-                        pressedKeys.add(event.key);
-                    }
+                const pressedLane = this.lanes.find(lane => lane.key === event.key);
+                if (pressedLane && !this.pressedKeys.has(event.key)) {
+                    this.pressedKeys.add(event.key);
+                    this.playHitSound(event.key);
+                    this.handleNoteHit(pressedLane);
                 }
             }
         });
@@ -239,18 +271,15 @@ class GameManager {
         document.addEventListener('keyup', (event) => {
             const pressedLane = this.lanes.find(lane => lane.key === event.key);
             if (pressedLane) {
-                pressedKeys.delete(event.key);
+                this.pressedKeys.delete(event.key);
             }
         });
     }
 
-    // Modified hit detection to use timing instead of pixels
     handleNoteHit(lane) {
         if (!lane.notes.length) return;
 
-        // Get current time relative to when the song started
-        const currentTime = (performance.now() - this.startTime) / 1000; // Convert to seconds
-
+        const currentTime = (performance.now() - this.startTime) / 1000;
         let closestNote = null;
         let closestTimeDiff = Infinity;
         let closestIndex = -1;
@@ -290,27 +319,33 @@ class GameManager {
             hitWindowBad: this.timingWindows.bad
         });
 
-        // Check if the note is within any timing window
+        // Check timing windows
         if (closestNote && timeDiffMs <= this.timingWindows.bad) {
             if (timeDiffMs <= this.timingWindows.perfect) {
                 this.showHitText(lane, 'PERFECT', '#00ff00');
                 this.score += 300;
+                this.currentCombo++;
                 console.log('Hit result: PERFECT');
             } else if (timeDiffMs <= this.timingWindows.good) {
                 this.showHitText(lane, 'GOOD', '#ffff00');
                 this.score += 150;
+                this.currentCombo++;
                 console.log('Hit result: GOOD');
             } else {
+                // BAD hit - still maintains combo
                 this.showHitText(lane, 'BAD', '#ff6666');
                 this.score += 50;
+                this.currentCombo++; // Keep the combo going
                 console.log('Hit result: BAD');
             }
 
             // Remove the hit note
             lane.notes.splice(closestIndex, 1);
         }
+        // Early hits or no notes in range - no penalty
     }
 
+    // Modified showHitText to handle misses
     showHitText(lane, text, color) {
         lane.hitText = text;
         lane.hitTextColor = color;
@@ -327,6 +362,42 @@ class GameManager {
         }, this.hitTextDuration);
 
         this.hitTextTimers.set(lane.key, timer);
+    }
+
+    // Draws all canvas and components
+    draw() {
+        // Clear the canvas
+        this.ctx.fillStyle = 'black';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw game elements
+        this.drawLaneSeparators();
+        this.drawGameplayHitZones();
+
+        if (this.debugMode) {
+            this.drawHitZones();
+        }
+
+        this.ctx.strokeStyle = 'blue';
+        this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.drawNotes();
+        this.drawHitText();
+
+        // Draw centered score at top
+        this.drawCenteredText(`${this.score}`, 60, '32px');
+
+        // Draw combo if greater than 0
+        if (this.currentCombo > 0) {
+            this.drawCenteredText(this.currentCombo.toString(), 400, '40px');
+        }
+
+        // Draw key hints
+        this.ctx.font = '20px nunito';
+        this.lanes.forEach(lane => {
+            const centerX = lane.x + (this.laneWidth / 2);
+            this.ctx.fillText(lane.key.toUpperCase(), centerX - 5, this.visualHitZoneY + 80);
+        });
     }
 
     // Modified drawHitZones to use debug information
@@ -414,11 +485,20 @@ class GameManager {
             if (lane.hitText) {
                 const centerX = lane.x + (this.laneWidth / 2);
                 this.ctx.fillStyle = lane.hitTextColor;
-                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 50);
+                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 200);
             }
         });
 
         this.ctx.textAlign = 'left'; // Reset text align for score
+    }
+
+    // Draw centered text
+    drawCenteredText(text, y, fontSize = '20px', color = 'white') {
+        this.ctx.font = `${fontSize} nunito`;
+        this.ctx.fillStyle = color;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(text, this.canvas.width / 2, y);
+        this.ctx.textAlign = 'left'; // Reset alignment
     }
 
     // Draw lane separators
@@ -437,7 +517,7 @@ class GameManager {
     }
 
     drawGameplayHitZones() {
-        // Draw hit zone circles in each lane at visual position
+        // Draw hit zone circles in each lane
         this.lanes.forEach(lane => {
             const centerX = lane.x + (this.laneWidth / 2);
 
@@ -448,115 +528,49 @@ class GameManager {
             this.ctx.arc(centerX, this.visualHitZoneY, this.noteRadius, 0, Math.PI * 2);
             this.ctx.stroke();
 
-            // Add subtle fill for better visibility
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            this.ctx.fill();
+            // Fill circle if key is pressed
+            if (this.pressedKeys.has(lane.key)) {
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.fill();
+            }
         });
 
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 1;
     }
 
-    draw() {
-        // Clear the canvas
-        this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Draw game elements
-        this.drawLaneSeparators();
-        this.drawGameplayHitZones();
-
-        // debug only hit zones
-        if (this.debugMode) {
-            this.drawHitZones(); // Debug visualization
-        }
-
-        // Debug: Draw canvas boundaries
-        this.ctx.strokeStyle = 'blue';
-        this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
-
-        this.drawNotes();  // Make sure this is called
-        this.drawHitText();
-
-        // Draw score and other UI
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '20px nunito';
-        this.ctx.fillText('Your Score:', this.canvas.width - 125, 25);
-        this.ctx.fillText(this.score, this.canvas.width - 80, 60);
-
-        // Draw key hints relative to visual hit zone
-        this.ctx.font = '15px nunito';
-        this.lanes.forEach(lane => {
-            const centerX = lane.x + (this.laneWidth / 2);
-            this.ctx.fillText(lane.key.toUpperCase(), centerX - 5, this.visualHitZoneY + 60);
-        });
-    }
-
-    // Modified update method to check for misses based on timing
-    // Auto-play hit detection in update method
-    // update() {
-    //     const currentTime = (performance.now() - this.startTime) / 1000;
-    //     this.gameTimer = currentTime * 1000; // Convert to milliseconds
-    //
-    //     // Auto-play note hitting based on timing
-    //     if (this.autoPlay) {
-    //         console.log("AutoPlay is turned on")
-    //         // Check upcoming notes
-    //         while (this.autoPlayNextNoteIndex < this.allNoteTimings.length) {
-    //             const nextNote = this.allNoteTimings[this.autoPlayNextNoteIndex];
-    //             const timeDiff = Math.abs(this.gameTimer - nextNote.time);
-    //
-    //             console.log('Auto-play check:', {
-    //                 gameTime: this.gameTimer.toFixed(1),
-    //                 nextNoteTime: nextNote.time,
-    //                 timeDiff: timeDiff.toFixed(3),
-    //                 index: this.autoPlayNextNoteIndex
-    //             });
-    //
-    //             // If we're within 2ms of the note time, hit it
-    //             console.log("Note should auto hit + in if statement")
-    //             if (timeDiff <= 15) {
-    //                 const lane = this.lanes[nextNote.laneIndex];
-    //                 if (lane && lane.notes.length > 0) {
-    //                     this.handleNoteHit(lane);
-    //                     console.log('Auto-play hit triggered:', {
-    //                         time: this.gameTimer.toFixed(1),
-    //                         noteTime: nextNote.time,
-    //                         lane: nextNote.laneIndex
-    //                     });
-    //                 }
-    //                 this.autoPlayNextNoteIndex++;
-    //             } else if (this.gameTimer < nextNote.time) {
-    //                 // Haven't reached the next note time yet
-    //                 break;
-    //             } else {
-    //                 // Passed the note time
-    //                 this.autoPlayNextNoteIndex++;
-    //             }
-    //         }
-    //     }
-    //
-    //     // Regular note updates
-    //     this.lanes.forEach(lane => {
-    //         lane.notes.forEach(note => {
-    //             note.position.y += this.noteSpeed;
-    //         });
-    //     });
-    //
-    //     this.frameCount++;
-    //     this.lastFrameTime = performance.now();
-    // }
-
+    // Add method to check for missed notes in update loop
     update() {
         const currentTime = (performance.now() - this.startTime) / 1000;
         this.gameTimer = currentTime * 1000;
 
+        // Auto-play handling
         if (this.autoPlay) {
             this.handleAutoPlay();
-            //console.log("We called auto play")
         }
 
-        // Regular note updates
+        // Check for missed notes in each lane
         this.lanes.forEach(lane => {
+            // Check each note in the lane
+            for (let i = lane.notes.length - 1; i >= 0; i--) {
+                const note = lane.notes[i];
+                const timeDiff = Math.abs(currentTime - note.targetTime) * 1000;
+
+                // Only count as miss if the note is well past the hit window
+                if (currentTime > note.targetTime && timeDiff > this.timingWindows.bad) {
+                    this.showHitText(lane, 'MISS', '#ff0000');
+                    this.currentCombo = 0; // Only reset combo on complete misses
+                    lane.notes.splice(i, 1);
+
+                    console.log('Note missed:', {
+                        targetTime: note.targetTime,
+                        currentTime: currentTime,
+                        timeDiff: timeDiff,
+                        lane: lane.key
+                    });
+                }
+            }
+
+            // Update remaining notes
             lane.notes.forEach(note => {
                 note.position.y += this.noteSpeed;
             });
@@ -614,7 +628,7 @@ class GameManager {
 
 
     drawStartMenu() {
-        this.ctx.font = '30px nunito';
+        this.ctx.font = '40px nunito';
         this.ctx.fillStyle = 'black';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -632,13 +646,51 @@ class GameManager {
         this.ctx.fillText('Start', startX, startY);
 
         // Add instructions
-        this.ctx.font = '16px nunito';
+        this.ctx.font = '20px nunito';
         this.ctx.fillText('Press F2 to toggle Auto-Play before starting', startX, startY + 40);
         this.ctx.fillText('Press SPACE or Click to start', startX, startY + 70);
     }
 
+    // Need to reset combo on misses - add to wherever you handle misses
+    handleMiss() {
+        this.currentCombo = 0;
+        console.log('Combo reset due to miss');
+    }
+
+    playHitSound(key) {
+        const sound = this.hitSounds.get(key);
+        if (sound) {
+            // Create a new Audio element for overlapping sounds
+            const newSound = new Audio('./effects/hitsound.wav');
+            newSound.volume = this.hitSoundVolume;
+            newSound.play().catch(error => console.error('Error playing hit sound:', error));
+
+            // Replace the old sound with the new one
+            this.hitSounds.set(key, newSound);
+        }
+    }
+
+    // set hit sound volume
+    setHitSoundVolume(volume) {
+        this.hitSoundVolume = Math.max(0, Math.min(1, volume));
+        this.hitSounds.forEach(sound => {
+            sound.volume = this.hitSoundVolume;
+        });
+        console.log('Hit sound volume set to:', this.hitSoundVolume);
+    }
+
+    // set song volume
+    setSongVolume(volume) {
+        this.songVolume = Math.max(0, Math.min(1, volume));
+        if (this.music) {
+            this.music.volume = this.songVolume;
+        }
+        console.log('Song volume set to:', this.songVolume);
+    }
+
+    // Handles autoplay
     handleAutoPlay() {
-        console.log("Auto-play called");
+        console.log("Autoplay called");
         const currentTime = (performance.now() - this.startTime) / 1000; // Current time in seconds
         this.gameTimer = currentTime * 1000; // Game timer in milliseconds
 
