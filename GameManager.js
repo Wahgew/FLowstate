@@ -38,13 +38,53 @@ class GameManager {
 
         this.gameTimer = 0;
 
+        // Add performance monitoring
+        this.frameDeltas = [];
+        this.lastFrameTimestamp = 0;
+        this.averageFrameTime = 16.67; // Default to 60fps
+        this.performanceOffset = 0;
+
+        // Add cleanup tracking
+        this.processedNotes = new Set();
+        this.cleanupInterval = null;
+        this.lastCleanupTime = 0;
+        this.cleanupThreshold = 5000; // Cleanup every 5 seconds
+        this.animationFrameId = null;
+        this.noteSpawnPromises = [];
+
+        // Modify hit zone calculations
+        this.baseHitZoneY = 950; // Visual hit zone
+        this.hitZoneY = this.baseHitZoneY; // Will be adjusted based on performance
+
+        // Add performance monitoring to gameLoop
+        this.updatePerformanceMetrics = (timestamp) => {
+            if (this.lastFrameTimestamp) {
+                const delta = timestamp - this.lastFrameTimestamp;
+                this.frameDeltas.push(delta);
+
+                // Keep only last 60 frames for average
+                if (this.frameDeltas.length > 60) {
+                    this.frameDeltas.shift();
+                }
+
+                // Calculate average frame time
+                this.averageFrameTime = this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length;
+
+                // Adjust hit zone based on performance
+                const performanceRatio = this.averageFrameTime / 16.67; // Compare to ideal 60fps
+                this.performanceOffset = Math.max(0, (performanceRatio - 1) * 100);
+                this.hitZoneY = this.baseHitZoneY - this.performanceOffset;
+            }
+            this.lastFrameTimestamp = timestamp;
+        };
+
         // Convert AR to actual timing
         this.approachRate = 3; // Configurable AR
         this.approachDuration = 1200 - (150 * this.approachRate); // Time note is visible in ms
 
         // Calculate fall distance and speed
         this.spawnY = -100; // Starting Y position
-        this.hitZoneY = 1070; // optimal position for hit zones (based on 10ms allowance)
+        this.hitZoneY = 950; // optimal position for hit zones (based on 10ms allowance)
         this.distanceToHitLine = this.hitZoneY - this.spawnY;
 
         // Calculate approach time based on AR
@@ -152,10 +192,20 @@ class GameManager {
         // Reset auto-play index
         this.autoPlayNextNoteIndex = 0;
 
-        // Initialize lanes and spawn notes
+        // Clear any existing animation frame
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+
+        // Clear any existing note spawn timers
+        this.noteSpawnTimers.forEach(timer => clearTimeout(timer));
+        this.noteSpawnTimers = [];
+
+
+        // Initialize lanes and spawn notes more efficiently
         this.songData.sheet.forEach((laneData, index) => {
             const lane = {
-                x: offsetX + (index * this.laneWidth),
+                x: this.laneStartX + (index * this.laneWidth),
                 y: 0,
                 key: ['s', 'd', 'k', 'l'][index],
                 hitText: '',
@@ -163,14 +213,21 @@ class GameManager {
             };
             this.lanes.push(lane);
 
-            laneData.notes.forEach(note => {
-                const spawnTime = (note.hitTime * 1000) - this.approachDuration;
-                const timer = setTimeout(() => {
-                    this.spawnNote(lane, note.hitTime);
-                    this.noteCount++;
-                }, Math.max(0, spawnTime));
-                this.noteSpawnTimers.push(timer);
+            // Use Promise-based note spawning for better memory management
+            const spawnPromise = new Promise(resolve => {
+                laneData.notes.forEach(note => {
+                    const spawnTime = (note.hitTime * 1000) - this.approachDuration;
+                    const timer = setTimeout(() => {
+                        if (this.isRunning) {  // Only spawn if game is still running
+                            this.spawnNote(lane, note.hitTime);
+                            this.noteCount++;
+                        }
+                    }, Math.max(0, spawnTime));
+                    this.noteSpawnTimers.push(timer);
+                });
+                resolve();
             });
+            this.noteSpawnPromises.push(spawnPromise);
         });
 
         this.isRunning = true;
@@ -277,6 +334,38 @@ class GameManager {
         document.addEventListener('keyup', this.keyupListener);
     }
 
+    cleanupResources() {
+        const currentTime = performance.now();
+
+        // Only cleanup every few seconds to avoid excessive garbage collection
+        if (currentTime - this.lastCleanupTime < this.cleanupThreshold) {
+            return;
+        }
+
+        // Cleanup old notes
+        this.lanes.forEach(lane => {
+            // Remove notes that are way past the hit zone
+            lane.notes = lane.notes.filter(note => {
+                const noteTime = note.targetTime * 1000;
+                const currentGameTime = currentTime - this.startTime;
+                return currentGameTime - noteTime < 2000; // Keep notes within 2 seconds of current time
+            });
+        });
+
+        // Clear old hit text timers
+        this.hitTextTimers.forEach((timer, key) => {
+            clearTimeout(timer);
+            this.hitTextTimers.delete(key);
+        });
+
+        // Clear hit positions array if it's getting too large
+        if (this.autoPlayHitPositions.length > 100) {
+            this.autoPlayHitPositions = this.autoPlayHitPositions.slice(-50);
+        }
+
+        this.lastCleanupTime = currentTime;
+    }
+
     // Update preloadTimingData to keep times in seconds
     preloadTimingData() {
         console.log('Preloading timing data...');
@@ -331,7 +420,11 @@ class GameManager {
         console.log('Hit detected:', {
             lane: lane.key,
             currentTime: currentTime,
-            noteCount: lane.notes.length
+            noteCount: lane.notes.length,
+            notes: lane.notes.map(note => ({
+                targetTime: note.targetTime,
+                position: note.position.y
+            }))
         });
 
         // Find the closest note by time difference
@@ -342,7 +435,8 @@ class GameManager {
                 noteIndex: index,
                 noteTargetTime: note.targetTime,
                 timeDifference: timeDiff,
-                currentClosest: closestTimeDiff
+                currentClosest: closestTimeDiff,
+                noteY: note.position.y
             });
 
             if (timeDiff < closestTimeDiff) {
@@ -359,10 +453,12 @@ class GameManager {
             timeDifference: timeDiffMs,
             hitWindowPerfect: this.timingWindows.perfect,
             hitWindowGood: this.timingWindows.good,
-            hitWindowBad: this.timingWindows.bad
+            hitWindowBad: this.timingWindows.bad,
+            noteIndex: closestIndex,
+            notePosition: closestNote?.position.y
         });
 
-        // Check timing windows
+        // Check timing windows and immediately remove note if hit
         if (closestNote && timeDiffMs <= this.timingWindows.bad) {
             if (timeDiffMs <= this.timingWindows.perfect) {
                 this.showHitText(lane, 'PERFECT', '#00ff00');
@@ -375,17 +471,22 @@ class GameManager {
                 this.currentCombo++;
                 console.log('Hit result: GOOD');
             } else {
-                // BAD hit - still maintains combo
                 this.showHitText(lane, 'BAD', '#ff6666');
                 this.score += 50;
-                this.currentCombo++; // Keep the combo going
+                this.currentCombo++;
                 console.log('Hit result: BAD');
             }
 
-            // Remove the hit note
+            // Immediately remove the hit note
             lane.notes.splice(closestIndex, 1);
+
+            // Debug note removal
+            console.log('Note removed:', {
+                laneKey: lane.key,
+                remainingNotes: lane.notes.length,
+                removedIndex: closestIndex
+            });
         }
-        // Early hits or no notes in range - no penalty
     }
 
     // Modified showHitText to handle misses
@@ -479,7 +580,7 @@ class GameManager {
 
         // Draw debug info background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(5, 5, 300, 180);
+        this.ctx.fillRect(5, 5, 300, 200); // Made slightly taller for new info
 
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         this.ctx.font = '14px nunito';
@@ -490,6 +591,8 @@ class GameManager {
 
         const debugInfo = [
             `Game Time: ${this.gameTimer.toFixed(0)}ms`,
+            `FPS: ${this.currentFPS?.toFixed(1) || '60.0'}`,
+            `Hit Tolerance: ${this.currentTolerance?.toFixed(1) || '12.0'}ms`,
             `Auto-Play: ${this.autoPlay ? 'ON' : 'OFF'}`,
             `Total Notes: ${this.allNoteTimings.length}`,
             `Auto-Play Hits: ${this.autoPlayHitPositions.length}`,
@@ -528,8 +631,20 @@ class GameManager {
         this.ctx.fillStyle = 'white';
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
 
-        this.lanes.forEach(lane => {
-            lane.notes.forEach(note => {
+        this.lanes.forEach((lane, laneIndex) => {
+            // First, verify notes array exists and has content
+            if (!lane.notes || !Array.isArray(lane.notes)) {
+                console.warn(`Invalid notes array in lane ${laneIndex}`);
+                return;
+            }
+
+            lane.notes.forEach((note, noteIndex) => {
+                // Verify note has valid position
+                if (!note || !note.position || typeof note.position.y !== 'number') {
+                    console.warn(`Invalid note at index ${noteIndex} in lane ${laneIndex}`);
+                    return;
+                }
+
                 const centerX = lane.x + (this.laneWidth / 2);
 
                 // Draw note circle
@@ -545,6 +660,7 @@ class GameManager {
                     this.ctx.fillStyle = 'gray';
                     this.ctx.font = '10px nunito';
                     this.ctx.fillText(`${timeToHit.toFixed(0)}ms`, centerX - 15, note.position.y);
+                    this.ctx.fillStyle = 'white'; // Reset fill style
                 }
             });
         });
@@ -616,6 +732,8 @@ class GameManager {
         const currentTime = (performance.now() - this.startTime) / 1000;
         this.gameTimer = currentTime * 1000;
 
+        this.cleanupResources();
+
         // Auto-play handling
         if (this.autoPlay) {
             this.handleAutoPlay();
@@ -654,19 +772,23 @@ class GameManager {
     }
 
     gameLoop(timestamp) {
-        if (!this.isRunning) return;
-
-        // Maintain consistent frame rate
-        const elapsed = timestamp - this.lastFrameTime;
-        if (elapsed < this.frameTime) {
-            requestAnimationFrame((t) => this.gameLoop(t));
+        if (!this.isRunning) {
+            cancelAnimationFrame(this.animationFrameId);
             return;
+        }
+
+        // Update performance metrics
+        this.updatePerformanceMetrics(timestamp);
+
+        // Clear previous animation frame if it exists
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
         }
 
         this.update();
         this.draw();
 
-        requestAnimationFrame((t) => this.gameLoop(t));
+        this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
     }
 
     calculateSpawnY(hitTime) {
@@ -761,6 +883,20 @@ class GameManager {
         this.music.pause();
         this.music.currentTime = 0;
 
+        // Cancel animation frame
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        // Clear all timeouts
+        this.noteSpawnTimers.forEach(timer => clearTimeout(timer));
+        this.noteSpawnTimers = [];
+
+        // Wait for any pending note spawn promises to resolve
+        await Promise.all(this.noteSpawnPromises);
+        this.noteSpawnPromises = [];
+
         // Clear game state
         this.score = 0;
         this.currentCombo = 0;
@@ -784,6 +920,7 @@ class GameManager {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+
         // Return to start menu
         if (this.onSongSelect) {
             this.onSongSelect();
@@ -800,6 +937,15 @@ class GameManager {
         const currentTime = (performance.now() - this.startTime) / 1000; // Current time in seconds
         this.gameTimer = currentTime * 1000; // Game timer in milliseconds
 
+        // Calculate adaptive timing tolerance based on performance
+        const baseTimingTolerance = 0.010; // Base tolerance for 60fps
+        const performanceMultiplier = this.averageFrameTime / 16.67;
+        const adaptiveTolerance = Math.min(0.050, baseTimingTolerance * performanceMultiplier); //50ms at latest response time (its really bad)
+
+        // Store current FPS and tolerance for debug display
+        this.currentFPS = 1000 / this.averageFrameTime;
+        this.currentTolerance = adaptiveTolerance * 1000; // Convert to ms for display
+
         // Check if we have any notes to process
         while (this.autoPlayNextNoteIndex < this.allNoteTimings.length) {
             const nextNote = this.allNoteTimings[this.autoPlayNextNoteIndex];
@@ -811,17 +957,20 @@ class GameManager {
                 nextNoteTimeSeconds: nextNote.time.toFixed(3),
                 laneIndex: nextNote.laneIndex,
                 notesInLane: lane?.notes.length || 0,
-                autoPlayIndex: this.autoPlayNextNoteIndex
+                autoPlayIndex: this.autoPlayNextNoteIndex,
+                currentFPS: this.currentFPS.toFixed(1),
+                toleranceMS: this.currentTolerance.toFixed(1)
             });
 
             // Check if the lane exists and has notes
             if (!lane || lane.notes.length === 0) {
                 // Only increment index if we're well past the note time
-                if (currentTime > (nextNote.time + 1)) {
+                if (currentTime > (nextNote.time + adaptiveTolerance * 2)) {
                     console.log('Skipping note - no note in lane or too late:', {
                         currentTime: currentTime.toFixed(3),
                         noteTime: nextNote.time.toFixed(3),
-                        laneIndex: nextNote.laneIndex
+                        laneIndex: nextNote.laneIndex,
+                        toleranceMS: (adaptiveTolerance * 1000).toFixed(1)
                     });
                     this.autoPlayNextNoteIndex++;
                 }
@@ -838,17 +987,20 @@ class GameManager {
                 timeDiffSeconds: timeDiff.toFixed(3),
                 timeDiffMs: (timeDiff * 1000).toFixed(1),
                 noteY: noteToHit.position.y.toFixed(1),
-                index: this.autoPlayNextNoteIndex
+                index: this.autoPlayNextNoteIndex,
+                adaptiveToleranceMs: (adaptiveTolerance * 1000).toFixed(1),
+                currentFPS: this.currentFPS.toFixed(1)
             });
 
-            // If we're within 12ms (0.012 seconds) of the target time
-            if (timeDiff <= 0.012) { // 12ms error
+            // Use adaptive tolerance for hit detection
+            if (timeDiff <= adaptiveTolerance) {
                 console.log('Auto-play hit triggered:', {
                     hitTime: currentTime.toFixed(3),
                     targetTime: nextNote.time.toFixed(3),
                     timeDiffMs: (timeDiff * 1000).toFixed(1),
                     lane: nextNote.laneIndex,
-                    noteY: noteToHit.position.y.toFixed(1)
+                    noteY: noteToHit.position.y.toFixed(1),
+                    toleranceUsed: (adaptiveTolerance * 1000).toFixed(1)
                 });
 
                 // Store the y-position before hitting
@@ -861,12 +1013,12 @@ class GameManager {
             } else if (currentTime < nextNote.time) {
                 // Haven't reached the note time yet
                 break;
-            } else if (timeDiff > 0.1) { // If we're more than 100ms past the note
-                // Move to next note if we've missed this one
+            } else if (timeDiff > adaptiveTolerance * 2) { // Double tolerance for miss threshold
                 console.log('Note missed - too late:', {
                     currentTime: currentTime.toFixed(3),
                     noteTime: nextNote.time.toFixed(3),
-                    timeDiffMs: (timeDiff * 1000).toFixed(1)
+                    timeDiffMs: (timeDiff * 1000).toFixed(1),
+                    toleranceMS: (adaptiveTolerance * 1000).toFixed(1)
                 });
                 this.autoPlayNextNoteIndex++;
             }

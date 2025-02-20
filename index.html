@@ -78,13 +78,21 @@
         let scale;
         if (windowAspectRatio > gameAspectRatio) {
             // Window is wider than game aspect ratio
-            scale = (windowHeight / 1080) * 0.95; // 95% of full height
+            scale = windowHeight / 1080;
         } else {
             // Window is taller than game aspect ratio
-            scale = (windowWidth / 1920) * 0.95; // 95% of full width
+            scale = windowWidth / 1920;
         }
 
+        // Apply scale and center the game
         gameContainer.style.transform = `scale(${scale})`;
+        gameContainer.style.transformOrigin = 'center center';
+
+        // Ensure the container is properly centered
+        gameContainer.style.position = 'absolute';
+        gameContainer.style.left = '50%';
+        gameContainer.style.top = '50%';
+        gameContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
 
     // Fullscreen handling
