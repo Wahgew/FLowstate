@@ -9,6 +9,8 @@ class SongLoader {
     static songList = [
         { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu' },
         { id: 'paranoia', title: 'Paranoia', path: './songs/KENTENSHI_paranoia.osu' },
+        { id: 'fortunate', title: 'Be Fortunate', path: './songs/befortunate.osu'},
+        { id: '8bit', title: '8bit Voyager', path: './songs/8bitVoyager.osu'},
         // Add more songs here
     ];
 

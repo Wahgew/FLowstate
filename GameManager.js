@@ -100,7 +100,7 @@ class GameManager {
         // Gameplay configuration
         this.laneWidth = 130;
         this.noteRadius = 50;
-        this.visualHitZoneY = 950;  // Position for visual feedback only
+        this.visualHitZoneY = 945;  // Position for visual feedback only
 
         this.score = 0;
         this.currentCombo = 0;
@@ -133,9 +133,9 @@ class GameManager {
 
         // Timing windows for hit detection (in milliseconds)
         this.timingWindows = {
-            perfect: 40,    // ±20ms for PERFECT
-            good: 60,      // ±120ms for GOOD
-            bad: 110,       // ±100ms for BAD
+            perfect: 60,    // ±20ms for PERFECT
+            good: 70,      // ±120ms for GOOD
+            bad: 100,       // ±100ms for BAD
         };
 
         // spawn time distance
@@ -147,7 +147,7 @@ class GameManager {
         // Add restart tracking
         this.rKeyPressTime = 0;
         this.isRKeyPressed = false;
-        this.restartHoldDuration = 2000; // 2 seconds to hold R
+        this.restartHoldDuration = 1000; // 2 seconds to hold R
         this.onSongSelect = null; // Callback for returning to song select
 
         console.log('Timing configuration:', {
@@ -186,8 +186,7 @@ class GameManager {
 
     initialize() {
         const totalLaneWidth = this.laneWidth * 4;
-        const offsetX = (this.canvas.width - totalLaneWidth) / 2;
-        this.laneStartX = offsetX;
+        this.laneStartX = (this.canvas.width - totalLaneWidth) / 2;
 
         // Reset auto-play index
         this.autoPlayNextNoteIndex = 0;
@@ -674,7 +673,7 @@ class GameManager {
             if (lane.hitText) {
                 const centerX = lane.x + (this.laneWidth / 2);
                 this.ctx.fillStyle = lane.hitTextColor;
-                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 200);
+                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 100);
             }
         });
 
@@ -719,7 +718,7 @@ class GameManager {
 
             // Fill circle if key is pressed
             if (this.pressedKeys.has(lane.key)) {
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 this.ctx.fill();
             }
         });
