@@ -39,12 +39,12 @@ class GameManager {
         this.gameTimer = 0;
 
         // Convert AR to actual timing
-        this.approachRate = 4; // Configurable AR
+        this.approachRate = 3; // Configurable AR
         this.approachDuration = 1200 - (150 * this.approachRate); // Time note is visible in ms
 
         // Calculate fall distance and speed
         this.spawnY = -100; // Starting Y position
-        this.hitZoneY = 970; // optimal position for hit zones (based on 10ms allowance)
+        this.hitZoneY = 1070; // optimal position for hit zones (based on 10ms allowance)
         this.distanceToHitLine = this.hitZoneY - this.spawnY;
 
         // Calculate approach time based on AR
@@ -60,7 +60,7 @@ class GameManager {
         // Gameplay configuration
         this.laneWidth = 130;
         this.noteRadius = 50;
-        this.visualHitZoneY = 860;  // Position for visual feedback only
+        this.visualHitZoneY = 950;  // Position for visual feedback only
 
         this.score = 0;
         this.currentCombo = 0;
@@ -93,9 +93,9 @@ class GameManager {
 
         // Timing windows for hit detection (in milliseconds)
         this.timingWindows = {
-            perfect: 35,    // ±20ms for PERFECT
-            good: 70,      // ±120ms for GOOD
-            bad: 120,       // ±100ms for BAD
+            perfect: 40,    // ±20ms for PERFECT
+            good: 60,      // ±120ms for GOOD
+            bad: 110,       // ±100ms for BAD
         };
 
         // spawn time distance
@@ -103,6 +103,12 @@ class GameManager {
 
         // Calculate pixels per frame needed to travel the distance in the approach duration
         this.noteSpeed = (this.distanceToHitLine / (this.approachDuration / 1000)) / this.targetFPS;
+
+        // Add restart tracking
+        this.rKeyPressTime = 0;
+        this.isRKeyPressed = false;
+        this.restartHoldDuration = 2000; // 2 seconds to hold R
+        this.onSongSelect = null; // Callback for returning to song select
 
         console.log('Timing configuration:', {
             approachRate: this.approachRate,
@@ -130,8 +136,12 @@ class GameManager {
             noteSpeed: this.noteSpeed,
         });
 
+        // Store event listener references for cleanup
+        this.keydownListener = null;
+        this.keyupListener = null;
+
         this.initializeStartMenu();
-        this.addEventListeners();
+        this.initializeEventListeners();
     }
 
     initialize() {
@@ -184,6 +194,89 @@ class GameManager {
         }
     }
 
+    initializeEventListeners() {
+        // Remove any existing listeners first
+        if (this.keydownListener) {
+            document.removeEventListener('keydown', this.keydownListener);
+        }
+        if (this.keyupListener) {
+            document.removeEventListener('keyup', this.keyupListener);
+        }
+        if (this.startClickListener) {
+            this.canvas.removeEventListener('click', this.startClickListener);
+        }
+        if (this.startKeyListener) {
+            document.removeEventListener('keydown', this.startKeyListener);
+        }
+
+        // Initialize start screen listeners
+        this.startClickListener = () => {
+            if (!this.gameStarted) {
+                this.startGame();
+                this.canvas.removeEventListener('click', this.startClickListener);
+                document.removeEventListener('keydown', this.startKeyListener);
+            }
+        };
+        this.canvas.addEventListener('click', this.startClickListener);
+
+        this.startKeyListener = (event) => {
+            if (event.key === ' ' && !this.gameStarted) {
+                this.startGame();
+                this.canvas.removeEventListener('click', this.startClickListener);
+                document.removeEventListener('keydown', this.startKeyListener);
+            }
+        };
+        document.addEventListener('keydown', this.startKeyListener);
+
+        // Initialize gameplay listeners
+        this.keydownListener = (event) => {
+            // Handle F2 for debug mode
+            if (event.key === 'F2') {
+                if (!this.gameStarted) {
+                    this.toggleDebugMode();
+                }
+                return;
+            }
+
+            // Only process gameplay keys if not in auto-play
+            if (!this.autoPlay) {
+                const pressedLane = this.lanes.find(lane => lane.key === event.key);
+                if (pressedLane && !this.pressedKeys.has(event.key)) {
+                    this.pressedKeys.add(event.key);
+                    this.playHitSound(event.key);
+                    this.handleNoteHit(pressedLane);
+                }
+            }
+
+            // R key press handling
+            if (event.key.toLowerCase() === 'r' && !this.isRKeyPressed) {
+                this.isRKeyPressed = true;
+                this.rKeyPressTime = performance.now();
+            }
+        };
+
+        this.keyupListener = (event) => {
+            const pressedLane = this.lanes.find(lane => lane.key === event.key);
+            if (pressedLane) {
+                this.pressedKeys.delete(event.key);
+            }
+
+            // R key release handling - check hold duration
+            if (event.key.toLowerCase() === 'r') {
+                const holdDuration = performance.now() - this.rKeyPressTime;
+                if (this.isRKeyPressed && holdDuration >= this.restartHoldDuration) {
+                    this.handleRestart();
+                }
+                this.isRKeyPressed = false;
+                this.rKeyPressTime = 0;
+            }
+        };
+
+        // Add the gameplay listeners
+        document.addEventListener('keydown', this.keydownListener);
+        document.addEventListener('keyup', this.keyupListener);
+    }
+
     // Update preloadTimingData to keep times in seconds
     preloadTimingData() {
         console.log('Preloading timing data...');
@@ -223,56 +316,6 @@ class GameManager {
             debugMode: this.debugMode,
             autoPlay: this.autoPlay,
             gameStarted: this.gameStarted
-        });
-    }
-
-    addEventListeners() {
-        this.startClickListener = () => {
-            if (!this.gameStarted) {
-                this.startGame();
-                this.canvas.removeEventListener('click', this.startClickListener);
-                document.removeEventListener('keydown', this.startKeyListener);
-            }
-        };
-        this.canvas.addEventListener('click', this.startClickListener);
-
-        this.startKeyListener = (event) => {
-            if (event.key === ' ' && !this.gameStarted) {
-                this.startGame();
-                this.canvas.removeEventListener('click', this.startClickListener);
-                document.removeEventListener('keydown', this.startKeyListener);
-            }
-        };
-        document.addEventListener('keydown', this.startKeyListener);
-
-        const pressedKeys = new Set();
-
-        // Single event listener for all keyboard events
-        document.addEventListener('keydown', (event) => {
-            // Handle F2 for debug mode
-            if (event.key === 'F2') {
-                if (!this.gameStarted) {
-                    this.toggleDebugMode();
-                }
-                return;
-            }
-
-            // Only process gameplay keys if not in auto-play
-            if (!this.autoPlay) {
-                const pressedLane = this.lanes.find(lane => lane.key === event.key);
-                if (pressedLane && !this.pressedKeys.has(event.key)) {
-                    this.pressedKeys.add(event.key);
-                    this.playHitSound(event.key);
-                    this.handleNoteHit(pressedLane);
-                }
-            }
-        });
-
-        document.addEventListener('keyup', (event) => {
-            const pressedLane = this.lanes.find(lane => lane.key === event.key);
-            if (pressedLane) {
-                this.pressedKeys.delete(event.key);
-            }
         });
     }
 
@@ -367,6 +410,7 @@ class GameManager {
     // Draws all canvas and components
     draw() {
         // Clear the canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = 'black';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -378,8 +422,8 @@ class GameManager {
             this.drawHitZones();
         }
 
-        this.ctx.strokeStyle = 'blue';
-        this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+        //this.ctx.strokeStyle = 'blue';
+        //this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawNotes();
         this.drawHitText();
@@ -398,6 +442,35 @@ class GameManager {
             const centerX = lane.x + (this.laneWidth / 2);
             this.ctx.fillText(lane.key.toUpperCase(), centerX - 5, this.visualHitZoneY + 80);
         });
+
+        // Draw restart progress if R is being held
+        if (this.isRKeyPressed && this.rKeyPressTime > 0) {
+            const currentTime = performance.now();
+            const holdDuration = currentTime - this.rKeyPressTime;
+            const progress = Math.min(holdDuration / this.restartHoldDuration, 1);
+
+            // Draw progress bar at the top center of the screen
+            const barWidth = 200;
+            const barHeight = 10;
+            const x = (this.canvas.width - barWidth) / 2;
+            const y = 20;
+
+            // Background
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.fillRect(x, y, barWidth, barHeight);
+
+            // Progress
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            this.ctx.fillRect(x, y, barWidth * progress, barHeight);
+
+            // Text
+            if (progress < 1) {
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '14px nunito';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('Hold R to restart', this.canvas.width / 2, y + 25);
+            }
+        }
     }
 
     // Modified drawHitZones to use debug information
@@ -469,7 +542,7 @@ class GameManager {
                 if (this.debugMode) {
                     const currentTime = (performance.now() - this.startTime) / 1000;
                     const timeToHit = (note.targetTime - currentTime) * 1000;
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    this.ctx.fillStyle = 'gray';
                     this.ctx.font = '10px nunito';
                     this.ctx.fillText(`${timeToHit.toFixed(0)}ms`, centerX - 15, note.position.y);
                 }
@@ -638,7 +711,7 @@ class GameManager {
         const startX = this.canvas.width / 2;
         const startY = this.canvas.height / 2;
 
-        // Show auto-play status in start menu
+        // Show autoplay status in start menu
         if (this.debugMode) {
             this.ctx.fillText('Auto-Play Mode', startX, startY - 40);
         }
@@ -649,12 +722,6 @@ class GameManager {
         this.ctx.font = '20px nunito';
         this.ctx.fillText('Press F2 to toggle Auto-Play before starting', startX, startY + 40);
         this.ctx.fillText('Press SPACE or Click to start', startX, startY + 70);
-    }
-
-    // Need to reset combo on misses - add to wherever you handle misses
-    handleMiss() {
-        this.currentCombo = 0;
-        console.log('Combo reset due to miss');
     }
 
     playHitSound(key) {
@@ -686,6 +753,45 @@ class GameManager {
             this.music.volume = this.songVolume;
         }
         console.log('Song volume set to:', this.songVolume);
+    }
+
+    async handleRestart() {
+        // Stop current game loop and music
+        this.isRunning = false;
+        this.music.pause();
+        this.music.currentTime = 0;
+
+        // Clear game state
+        this.score = 0;
+        this.currentCombo = 0;
+        this.gameTimer = 0;
+        this.gameStarted = false;
+        this.pressedKeys.clear();
+
+        // Clear notes and timers
+        this.lanes = [];
+        this.noteSpawnTimers.forEach(timer => clearTimeout(timer));
+        this.noteSpawnTimers = [];
+        this.hitTextTimers.forEach(timer => clearTimeout(timer));
+        this.hitTextTimers.clear();
+
+        // Reset auto-play state if in debug mode
+        if (this.debugMode) {
+            this.debugMode = false;
+            this.autoPlay = false;
+        }
+
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Return to start menu
+        if (this.onSongSelect) {
+            this.onSongSelect();
+        } else {
+            // Fallback to reinitializing start menu if no song select callback
+            await this.initializeStartMenu();
+            this.initializeEventListeners();
+        }
     }
 
     // Handles autoplay
@@ -735,8 +841,8 @@ class GameManager {
                 index: this.autoPlayNextNoteIndex
             });
 
-            // If we're within 10ms (0.010 seconds) of the target time
-            if (timeDiff <= 0.010) { // 10ms error
+            // If we're within 12ms (0.012 seconds) of the target time
+            if (timeDiff <= 0.012) { // 12ms error
                 console.log('Auto-play hit triggered:', {
                     hitTime: currentTime.toFixed(3),
                     targetTime: nextNote.time.toFixed(3),
