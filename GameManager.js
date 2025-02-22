@@ -24,11 +24,10 @@ class GameManager {
 
         // FPS control
         this.targetFPS = 60;
-        this.frameInterval = 1000 / this.targetFPS; // Time between frames in ms
+        this.frameTime = 1000 / this.targetFPS; // Should be ~16.67ms
         this.lastFrameTime = 0;
         this.frameDeltas = [];
         this.currentFPS = 60;
-        this.accumulator = 0; // For frame time accumulation
 
         // Auto-play timing data (preloaded)
         this.allNoteTimings = [];
@@ -314,24 +313,6 @@ class GameManager {
             firstNoteTime: this.allNoteTimings[0]?.time.toFixed(3),
             lastNoteTime: this.allNoteTimings[this.allNoteTimings.length - 1]?.time.toFixed(3)
         });
-    }
-
-    // Add this method to your class
-    updateFPSMetrics(timestamp) {
-        if (this.lastFrameTimestamp) {
-            const delta = timestamp - this.lastFrameTimestamp;
-            this.frameDeltas.push(delta);
-
-            // Keep only last 60 frames for average
-            if (this.frameDeltas.length > 60) {
-                this.frameDeltas.shift();
-            }
-
-            // Calculate average frame time and FPS
-            this.averageFrameTime = this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length;
-            this.currentFPS = 1000 / this.averageFrameTime;
-        }
-        this.lastFrameTimestamp = timestamp;
     }
 
     // Toggle debug/auto-play mode
@@ -683,7 +664,7 @@ class GameManager {
             });
         });
 
-        this.frameCount++;
+        //this.frameCount++;
         this.lastFrameTime = performance.now();
     }
 
@@ -691,24 +672,19 @@ class GameManager {
     gameLoop(timestamp) {
         if (!this.isRunning) return;
 
-        // Calculate real frame delta
-        const delta = timestamp - this.lastFrameTime;
-
-        // Update FPS tracking
-        this.frameDeltas.push(delta);
+        // Simple frame delta for FPS display
+        const frameDelta = timestamp - this.lastFrameTime;
+        this.frameDeltas.push(frameDelta);
         if (this.frameDeltas.length > 60) {
             this.frameDeltas.shift();
         }
-        this.currentFPS = 1000 / (this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length);
+        this.currentFPS = Math.round(1000 / (this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length));
 
-        // Proper frame limiting
-        if (timestamp >= this.lastFrameTime + this.frameInterval) {
-            // Update game state
+        // Strict frame limiting - back to basics
+        if (timestamp - this.lastFrameTime >= this.frameTime) {
             this.update();
             this.draw();
-
-            // Update last frame time to maintain consistent intervals
-            this.lastFrameTime = timestamp - (timestamp % this.frameInterval);
+            this.lastFrameTime = timestamp;
         }
 
         requestAnimationFrame((t) => this.gameLoop(t));
