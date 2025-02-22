@@ -53,7 +53,7 @@ class GameManager {
 
         // Calculate fall distance and speed
         this.spawnY = -100; // Starting Y position
-        this.hitZoneY = 950; // optimal position for hit zones (based on 10ms allowance)
+        this.hitZoneY = 1060; // optimal position for hit zones (based on 10ms allowance)
         this.distanceToHitLine = this.hitZoneY - this.spawnY;
 
         // Calculate approach time based on AR
@@ -69,7 +69,7 @@ class GameManager {
         // Gameplay configuration
         this.laneWidth = 130;
         this.noteRadius = 50;
-        this.visualHitZoneY = 930;  // Position for visual feedback only
+        this.visualHitZoneY = 950;  // Position for visual feedback only
 
         this.score = 0;
         this.currentCombo = 0;
