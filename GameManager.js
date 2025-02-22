@@ -22,6 +22,14 @@ class GameManager {
             totalNotes: 0
         };
 
+        // FPS control
+        this.targetFPS = 60;
+        this.frameInterval = 1000 / this.targetFPS; // Time between frames in ms
+        this.lastFrameTime = 0;
+        this.frameDeltas = [];
+        this.currentFPS = 60;
+        this.accumulator = 0; // For frame time accumulation
+
         // Auto-play timing data (preloaded)
         this.allNoteTimings = [];
         this.autoPlayNextNoteIndex = 0;
@@ -38,14 +46,6 @@ class GameManager {
         this.lanes = [];
         this.noteSpawnTimers = [];
         this.noteCount = 0;
-
-        // FPS control
-        this.targetFPS = 60;
-        this.frameTime = 1000 / this.targetFPS;
-        this.lastFrameTime = 0;
-        // Frame counting for debug output throttling
-        this.frameCount = 0;
-
         this.gameTimer = 0;
 
         // Convert AR to actual timing
@@ -54,7 +54,7 @@ class GameManager {
 
         // Calculate fall distance and speed
         this.spawnY = -100; // Starting Y position
-        this.hitZoneY = 1070; // optimal position for hit zones (based on 10ms allowance)
+        this.hitZoneY = 950; // optimal position for hit zones (based on 10ms allowance)
         this.distanceToHitLine = this.hitZoneY - this.spawnY;
 
         // Calculate approach time based on AR
@@ -70,7 +70,7 @@ class GameManager {
         // Gameplay configuration
         this.laneWidth = 130;
         this.noteRadius = 50;
-        this.visualHitZoneY = 950;  // Position for visual feedback only
+        this.visualHitZoneY = 930;  // Position for visual feedback only
 
         this.score = 0;
         this.currentCombo = 0;
@@ -103,9 +103,9 @@ class GameManager {
 
         // Timing windows for hit detection (in milliseconds)
         this.timingWindows = {
-            perfect: 40,    // ±20ms for PERFECT
-            good: 60,      // ±120ms for GOOD
-            bad: 120,       // ±100ms for BAD
+            perfect: 60,    // ±20ms for PERFECT
+            good: 70,      // ±120ms for GOOD
+            bad: 100,       // ±100ms for BAD
         };
 
         // spawn time distance
@@ -117,7 +117,7 @@ class GameManager {
         // Add restart tracking
         this.rKeyPressTime = 0;
         this.isRKeyPressed = false;
-        this.restartHoldDuration = 2000; // 2 seconds to hold R
+        this.restartHoldDuration = 1000; // 2 seconds to hold R
         this.onSongSelect = null; // Callback for returning to song select
 
         // End screen properties
@@ -316,6 +316,24 @@ class GameManager {
         });
     }
 
+    // Add this method to your class
+    updateFPSMetrics(timestamp) {
+        if (this.lastFrameTimestamp) {
+            const delta = timestamp - this.lastFrameTimestamp;
+            this.frameDeltas.push(delta);
+
+            // Keep only last 60 frames for average
+            if (this.frameDeltas.length > 60) {
+                this.frameDeltas.shift();
+            }
+
+            // Calculate average frame time and FPS
+            this.averageFrameTime = this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length;
+            this.currentFPS = 1000 / this.averageFrameTime;
+        }
+        this.lastFrameTimestamp = timestamp;
+    }
+
     // Toggle debug/auto-play mode
     toggleDebugMode() {
         // Only allow toggling debug mode before game starts
@@ -505,6 +523,7 @@ class GameManager {
 
         const debugInfo = [
             `Game Time: ${this.gameTimer.toFixed(0)}ms`,
+            `FPS: ${this.currentFPS.toFixed(1)}`,  // Add this line
             `Auto-Play: ${this.autoPlay ? 'ON' : 'OFF'}`,
             `Total Notes: ${this.allNoteTimings.length}`,
             `Auto-Play Hits: ${this.autoPlayHitPositions.length}`,
@@ -668,18 +687,29 @@ class GameManager {
         this.lastFrameTime = performance.now();
     }
 
+// Modified gameLoop with proper frame limiting
     gameLoop(timestamp) {
         if (!this.isRunning) return;
 
-        // Maintain consistent frame rate
-        const elapsed = timestamp - this.lastFrameTime;
-        if (elapsed < this.frameTime) {
-            requestAnimationFrame((t) => this.gameLoop(t));
-            return;
-        }
+        // Calculate real frame delta
+        const delta = timestamp - this.lastFrameTime;
 
-        this.update();
-        this.draw();
+        // Update FPS tracking
+        this.frameDeltas.push(delta);
+        if (this.frameDeltas.length > 60) {
+            this.frameDeltas.shift();
+        }
+        this.currentFPS = 1000 / (this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length);
+
+        // Proper frame limiting
+        if (timestamp >= this.lastFrameTime + this.frameInterval) {
+            // Update game state
+            this.update();
+            this.draw();
+
+            // Update last frame time to maintain consistent intervals
+            this.lastFrameTime = timestamp - (timestamp % this.frameInterval);
+        }
 
         requestAnimationFrame((t) => this.gameLoop(t));
     }
