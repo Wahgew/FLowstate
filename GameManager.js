@@ -24,10 +24,11 @@ class GameManager {
 
         // FPS control
         this.targetFPS = 60;
-        this.frameTime = 1000 / this.targetFPS; // Should be ~16.67ms
+        this.frameInterval = 1000 / this.targetFPS; // Time between frames in ms
         this.lastFrameTime = 0;
         this.frameDeltas = [];
         this.currentFPS = 60;
+        this.accumulator = 0;
 
         // Auto-play timing data (preloaded)
         this.allNoteTimings = [];
@@ -672,20 +673,28 @@ class GameManager {
     gameLoop(timestamp) {
         if (!this.isRunning) return;
 
-        // Simple frame delta for FPS display
-        const frameDelta = timestamp - this.lastFrameTime;
-        this.frameDeltas.push(frameDelta);
+        // Calculate frame delta
+        const frameTime = timestamp - this.lastFrameTime;
+        this.lastFrameTime = timestamp;
+
+        // Accumulate time delta
+        this.accumulator += frameTime;
+
+        // Update FPS tracking
+        this.frameDeltas.push(frameTime);
         if (this.frameDeltas.length > 60) {
             this.frameDeltas.shift();
         }
-        this.currentFPS = Math.round(1000 / (this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length));
+        this.currentFPS = 1000 / (this.frameDeltas.reduce((a, b) => a + b, 0) / this.frameDeltas.length);
 
-        // Strict frame limiting - back to basics
-        if (timestamp - this.lastFrameTime >= this.frameTime) {
+        // Process accumulated time in fixed timesteps
+        while (this.accumulator >= this.frameInterval) {
             this.update();
-            this.draw();
-            this.lastFrameTime = timestamp;
+            this.accumulator -= this.frameInterval;
         }
+
+        // Draw at whatever rate the display can handle
+        this.draw();
 
         requestAnimationFrame((t) => this.gameLoop(t));
     }
@@ -863,7 +872,7 @@ class GameManager {
             });
 
             // If we're within 12ms (0.012 seconds) of the target time
-            if (timeDiff <= 0.012) { // 12ms error
+            if (timeDiff <= 0.020) { // 12ms error
                 console.log('Auto-play hit triggered:', {
                     hitTime: currentTime.toFixed(3),
                     targetTime: nextNote.time.toFixed(3),
