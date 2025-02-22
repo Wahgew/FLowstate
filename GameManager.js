@@ -12,6 +12,16 @@ class GameManager {
         this.autoPlay = false;
         this.gameStarted = false;  // Track if game has started
 
+        // Add stats tracking
+        this.stats = {
+            perfectCount: 0,
+            goodCount: 0,
+            badCount: 0,
+            missCount: 0,
+            maxCombo: 0,
+            totalNotes: 0
+        };
+
         // Auto-play timing data (preloaded)
         this.allNoteTimings = [];
         this.autoPlayNextNoteIndex = 0;
@@ -95,7 +105,7 @@ class GameManager {
         this.timingWindows = {
             perfect: 40,    // ±20ms for PERFECT
             good: 60,      // ±120ms for GOOD
-            bad: 110,       // ±100ms for BAD
+            bad: 120,       // ±100ms for BAD
         };
 
         // spawn time distance
@@ -109,6 +119,11 @@ class GameManager {
         this.isRKeyPressed = false;
         this.restartHoldDuration = 2000; // 2 seconds to hold R
         this.onSongSelect = null; // Callback for returning to song select
+
+        // End screen properties
+        this.showingEndScreen = false;
+        this.fadeStartTime = 0;
+        this.fadeDuration = 2000; // 2 seconds
 
         console.log('Timing configuration:', {
             approachRate: this.approachRate,
