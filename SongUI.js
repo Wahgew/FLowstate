@@ -9,7 +9,7 @@ class SongSelectUI {
         this.songRecords = new Map(); // Cache for song records
 
         // Basic UI constants
-        this.songBoxWidth = 400;
+        this.songBoxWidth = 550;
         this.songBoxHeight = 80;
         this.spacing = 20;
 

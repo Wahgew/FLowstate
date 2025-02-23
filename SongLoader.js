@@ -7,8 +7,14 @@ class SongLoader {
 
     // List of all available songs
     static songList = [
-        { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu'},
+        { id: 'into_world', title: 'Into the World', path: './songs/Into_the_world.osu'},
+        { id: 'bbl_drizzy', title: 'BBL Drizzy', path: './songs/BBL_DRIZZY.osu'},
+        { id: 'good_loyal', title: 'Good Loyal Thots', path: './songs/Good_Loyal_Thots.osu'},
+        { id: 'navsegda', title: 'Navsegda', path: './songs/Navsegda.osu'},
+        { id: 'tsunami', title: 'Tsunami', path: './songs/Tsunami.osu'},
         { id: 'paranoia', title: 'Paranoia', path: './songs/KENTENSHI_paranoia.osu'},
+        { id: 'glaza', title: 'Glaza', path: './songs/Glaza.osu'},
+        { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu'},
         // Add more songs here
     ];
 
