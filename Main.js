@@ -60,7 +60,6 @@ window.onload = async function() {
 
         // Load all player records
         drawLoadingScreen(50, 'Loading Player Data...');
-        const playerRecords = await playerData.getAllRecords();
 
         // Initialize song selection UI
         const songSelect = new SongSelectUI(canvas, songLoader, playerData);
