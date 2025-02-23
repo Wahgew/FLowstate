@@ -1,7 +1,10 @@
 class GameManager {
-    constructor(songData = null) {
+    constructor(songInfo = null, playerData = null) {
         // important dont move placement
-        this.songData = songData;
+        this.playerData = playerData;
+        this.songData = songInfo?.data || null;
+        this.songId = songInfo?.id || null;
+
         this.songFile = this.songData?.songPath;
         this.music = new Audio(this.songFile);
         this.music.loop = false;
@@ -21,8 +24,6 @@ class GameManager {
             maxCombo: 0,
             totalNotes: 0
         };
-
-        this.gameState = 'menu'; // 'menu', 'playing', 'ended'
 
         // FPS control
         this.targetFPS = 60;
@@ -811,7 +812,7 @@ class GameManager {
     }
 
     // Add end screen display method
-    showEndScreen() {
+    async showEndScreen() {
         if (this.showingEndScreen) return;
 
         this.showingEndScreen = true;
@@ -822,11 +823,23 @@ class GameManager {
         this.stats.accuracy = accuracy.toFixed(2);
         this.stats.isFullCombo = this.stats.maxCombo === this.stats.totalNotes;
 
-        // Clear any remaining timers
-        this.noteSpawnTimers.forEach(timer => clearTimeout(timer));
-        this.noteSpawnTimers = [];
-        this.hitTextTimers.forEach(timer => clearTimeout(timer));
-        this.hitTextTimers.clear();
+        // Save record to database if playerData is available
+        if (this.playerData && this.songId) {  // Check for songId instead of songData
+            try {
+                await this.playerData.saveSongRecord(this.songId, {
+                    score: this.score,
+                    maxCombo: this.stats.maxCombo,
+                    accuracy: this.stats.accuracy,
+                    perfectCount: this.stats.perfectCount,
+                    goodCount: this.stats.goodCount,
+                    badCount: this.stats.badCount,
+                    missCount: this.stats.missCount,
+                    isFullCombo: this.stats.isFullCombo
+                });
+            } catch (error) {
+                console.error('Error saving song record:', error);
+            }
+        }
 
         // Create stats object for end screen
         const endScreenStats = {

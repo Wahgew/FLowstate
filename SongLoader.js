@@ -7,8 +7,8 @@ class SongLoader {
 
     // List of all available songs
     static songList = [
-        { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu' },
-        { id: 'paranoia', title: 'Paranoia', path: './songs/KENTENSHI_paranoia.osu' },
+        { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu'},
+        { id: 'paranoia', title: 'Paranoia', path: './songs/KENTENSHI_paranoia.osu'},
         // Add more songs here
     ];
 
