@@ -115,9 +115,9 @@ class PlayerDataManager {
             parseFloat(newRecord.accuracy) > parseFloat(oldRecord.accuracy)) return true;
 
         // Update if got full combo and didn't have it before
-        if (newRecord.isFullCombo && !oldRecord.isFullCombo) return true;
+        return !!(newRecord.isFullCombo && !oldRecord.isFullCombo);
 
-        return false;
+
     }
 
     async getSongRecord(songId) {
