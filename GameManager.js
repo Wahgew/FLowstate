@@ -549,7 +549,7 @@ class GameManager {
         ];
 
         debugInfo.forEach((text, index) => {
-            this.ctx.fillText(text, 10, 25 + (index * 18));
+            this.ctx.fillText(text, 10, 300 + (index * 18));
         });
 
         // Draw horizontal line at visual hit position
