@@ -2,7 +2,12 @@ window.onload = async function() {
     const canvas = document.getElementById('gameWorld');
     const ctx = canvas.getContext('2d');
 
-    // Show loading screen
+    // Global volume state
+    window.volumeState = {
+        songVolume: 0.5,    // Default values
+        hitSoundVolume: 0.4
+    };
+
     function drawLoadingScreen(progress, message) {
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -25,11 +30,28 @@ window.onload = async function() {
     }
 
     try {
-        // Initialize PlayerDataManager first (it's lightweight and needed for displaying grades)
+        // Initialize PlayerDataManager first
         const playerData = new PlayerDataManager();
-        // Make playerDataManager available globally for the reset button
-        window.playerDataManager = playerData;
         await playerData.initializeDB();
+        window.playerDataManager = playerData;
+
+        // Load volume settings from PlayerDataManager
+        const volumeSettings = await playerData.getVolumeSettings();
+        if (volumeSettings) {
+            window.volumeState.songVolume = volumeSettings.songVolume;
+            window.volumeState.hitSoundVolume = volumeSettings.hitSoundVolume;
+
+            // Update sliders to match loaded values
+            const songVolumeSlider = document.getElementById('songVolumeSlider');
+            const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
+            const songVolumeValue = document.getElementById('songVolumeValue');
+            const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+
+            songVolumeSlider.value = volumeSettings.songVolume * 100;
+            hitSoundVolumeSlider.value = volumeSettings.hitSoundVolume * 100;
+            songVolumeValue.textContent = `${Math.round(volumeSettings.songVolume * 100)}%`;
+            hitSoundVolumeValue.textContent = `${Math.round(volumeSettings.hitSoundVolume * 100)}%`;
+        }
 
         // Initialize song loader
         const songLoader = new SongLoader();
@@ -40,10 +62,8 @@ window.onload = async function() {
         drawLoadingScreen(50, 'Loading Player Data...');
         const playerRecords = await playerData.getAllRecords();
 
-        // Initialize song selection UI with both song and player data
+        // Initialize song selection UI
         const songSelect = new SongSelectUI(canvas, songLoader, playerData);
-
-        // Show song selection screen
         songSelect.show();
 
         // Handle keyboard input for song selection
@@ -51,18 +71,18 @@ window.onload = async function() {
             const selectedSong = songSelect.handleInput(event);
 
             if (selectedSong) {
-                // Hide song selection UI
                 songSelect.hide();
 
-                // Create game manager with selected song info and player data
+                // Create game manager with selected song and player data
                 window.gameManager = new GameManager({
                     id: selectedSong.id,
                     data: selectedSong.data
                 }, playerData);
-                window.gameManager.setHitSoundVolume(0.4);
-                window.gameManager.setSongVolume(0.5);
 
-                // Add callback for returning to song selection
+                // Use current volume state instead of hardcoded values
+                window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                window.gameManager.setSongVolume(window.volumeState.songVolume);
+
                 window.gameManager.onSongSelect = () => {
                     window.gameManager.music.pause();
                     window.gameManager.music.currentTime = 0;
@@ -71,9 +91,34 @@ window.onload = async function() {
                 };
             }
         });
+
+        // Update volume handler
+        window.updateVolumes = async function() {
+            const songVolumeSlider = document.getElementById('songVolumeSlider');
+            const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
+            const songVolumeValue = document.getElementById('songVolumeValue');
+            const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+
+            // Update global state
+            window.volumeState.songVolume = songVolumeSlider.value / 100;
+            window.volumeState.hitSoundVolume = hitSoundVolumeSlider.value / 100;
+
+            // Update display
+            songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+            hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+
+            // Update game manager if it exists
+            if (window.gameManager) {
+                window.gameManager.setSongVolume(window.volumeState.songVolume);
+                window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+            }
+
+            // Save to PlayerDataManager
+            await playerData.saveVolumeSettings(window.volumeState);
+        };
+
     } catch (error) {
         console.error('Error initializing game:', error);
-        // Show error message on canvas
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.font = '24px nunito';

@@ -3,6 +3,7 @@ class PlayerDataManager {
     static DB_NAME = 'RhythmGameDB';
     static DB_VERSION = 1;
     static STORE_NAME = 'songRecords';
+    static SETTINGS_STORE = 'gameSettings';
 
     // Grade color scheme using pastel colors (matching EndScreenUI)
     static GRADE_COLORS = {
@@ -49,6 +50,13 @@ class PlayerDataManager {
                         store.createIndex('grade', 'grade', { unique: false });
                         store.createIndex('isFullCombo', 'isFullCombo', { unique: false });
                         store.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+
+                    // Create object store for game settings
+                    if (!db.objectStoreNames.contains(PlayerDataManager.SETTINGS_STORE)) {
+                        db.createObjectStore(PlayerDataManager.SETTINGS_STORE, {
+                            keyPath: 'id'
+                        });
                     }
                 };
             });
@@ -120,6 +128,25 @@ class PlayerDataManager {
 
     }
 
+    async saveVolumeSettings(volumeSettings) {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readwrite');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+
+            const request = store.put({
+                id: 'volumeSettings',
+                songVolume: volumeSettings.songVolume,
+                hitSoundVolume: volumeSettings.hitSoundVolume,
+                timestamp: Date.now()
+            });
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
     async getSongRecord(songId) {
         if (!this.db) await this.initializeDB();
 
@@ -129,6 +156,32 @@ class PlayerDataManager {
             const request = store.get(songId);
 
             request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getVolumeSettings() {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readonly');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+            const request = store.get('volumeSettings');
+
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve({
+                        songVolume: request.result.songVolume,
+                        hitSoundVolume: request.result.hitSoundVolume
+                    });
+                } else {
+                    // Return default values if no settings found
+                    resolve({
+                        songVolume: 0.5,
+                        hitSoundVolume: 0.4
+                    });
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }
