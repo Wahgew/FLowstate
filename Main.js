@@ -7,7 +7,8 @@ window.onload = async function() {
         songVolume: 0.5,          // Default values
         hitSoundVolume: 0.4,      // For note hit sounds
         scrollSoundVolume: 0.1,   // For menu navigation
-        missSoundVolume: 0.8      // For missed notes
+        missSoundVolume: 0.8,      // For missed notes
+        applauseSoundVolume: 0.3  // For applause on high scores
     };
 
     function drawLoadingScreen(progress, message) {

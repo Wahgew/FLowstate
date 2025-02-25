@@ -17,6 +17,7 @@ class EndScreenUI {
         this.rainbowSpeed = 0.01; // Controls how fast the colors change
         this.currentStats = null;
         this.animationId = null;
+        this.applauseHasPlayed = false; // Track if applause has already played
     }
 
 
@@ -52,12 +53,45 @@ class EndScreenUI {
         this.animationId = requestAnimationFrame(() => this.animate());
     }
 
+    playApplauseSound() {
+        // Get volume from global state or use default
+        let soundVolume = 0.3; // Default value
+
+        if (window.volumeState && typeof window.volumeState.applauseSoundVolume === 'number') {
+            soundVolume = window.volumeState.applauseSoundVolume;
+        }
+
+        // Check if volume is 0 or very low, don't play sound
+        if (soundVolume <= 0.01) {
+            console.log('Applause sound muted, volume:', soundVolume);
+            return;
+        }
+
+        // Create and play the sound
+        const sound = new Audio('./effects/Applause.mp3');
+        sound.volume = soundVolume;
+
+        console.log('Playing applause sound with volume:', soundVolume);
+
+        sound.play().catch(error => {
+            console.error('Error playing applause sound:', error);
+        });
+    }
+
     show(stats) {
         if (!stats) return; // Don't show if no stats provided
 
         this.isVisible = true;
         this.currentStats = stats;
         this.animationFrame = 0;
+        this.applauseHasPlayed = false; // Reset applause played flag
+
+        // Check grade and play applause if A or higher
+        const grade = this.calculateGrade(parseFloat(stats.accuracy), stats.isFullCombo);
+        if (['A', 'S', 'SS'].includes(grade) && !this.applauseHasPlayed) {
+            this.playApplauseSound();
+            this.applauseHasPlayed = true;
+        }
 
         // Start animation only if we have stats
         if (!this.animationId && this.currentStats) {

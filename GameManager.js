@@ -221,15 +221,23 @@ class GameManager {
         // Remove any existing listeners first
         if (this.keydownListener) {
             document.removeEventListener('keydown', this.keydownListener);
+            this.keydownListener = null;
         }
         if (this.keyupListener) {
             document.removeEventListener('keyup', this.keyupListener);
+            this.keyupListener = null;
         }
         if (this.startClickListener) {
             this.canvas.removeEventListener('click', this.startClickListener);
+            this.startClickListener = null;
         }
         if (this.startKeyListener) {
             document.removeEventListener('keydown', this.startKeyListener);
+            this.startKeyListener = null;
+        }
+        if (this.endScreenKeyListener) {
+            document.removeEventListener('keydown', this.endScreenKeyListener);
+            this.endScreenKeyListener = null;
         }
 
         // Initialize start screen listeners
@@ -253,6 +261,9 @@ class GameManager {
 
         // Initialize gameplay listeners
         this.keydownListener = (event) => {
+            // Skip all input processing if end screen is showing
+            if (this.showingEndScreen) return;
+
             // Handle F2 for debug mode
             if (event.key === 'F2') {
                 if (!this.gameStarted) {
@@ -279,6 +290,9 @@ class GameManager {
         };
 
         this.keyupListener = (event) => {
+            // Skip all input processing if end screen is showing
+            if (this.showingEndScreen) return;
+
             const pressedLane = this.lanes.find(lane => lane.key === event.key);
             if (pressedLane) {
                 this.pressedKeys.delete(event.key);
@@ -294,17 +308,6 @@ class GameManager {
                 this.rKeyPressTime = 0;
             }
         };
-
-        document.addEventListener('keydown', (event) => {
-            if (this.showingEndScreen) {
-                if (this.endScreenUI.handleInput(event)) {
-                    // if (this.onSongSelect) {
-                    //     this.onSongSelect();
-                    // }
-                    this.handleRestart();
-                }
-            }
-        });
 
         // Add the gameplay listeners
         document.addEventListener('keydown', this.keydownListener);
@@ -772,8 +775,18 @@ class GameManager {
             this.accumulator -= this.frameInterval;
         }
 
-        // Check for song end after update
-        if (this.music.ended && this.lanes.every(lane => lane.notes.length === 0)) {
+        // Check for song end after update - ENHANCED END CONDITION CHECK
+        const songEnded = this.music.ended || (this.music.currentTime >= this.music.duration - 0.1); // Consider "almost ended" as ended
+        const noMoreNotes = this.lanes.every(lane => lane.notes.length === 0);
+        const allNotesSpawned = this.noteSpawnTimers.length === 0 || this.noteCount >= this.allNoteTimings.length;
+
+        if ((songEnded && noMoreNotes) || (noMoreNotes && allNotesSpawned)) {
+            console.log('Game ending conditions met:', {
+                songEnded,
+                noMoreNotes,
+                allNotesSpawned
+            });
+
             this.isRunning = false;
             this.showEndScreen();
             return;
@@ -821,6 +834,19 @@ class GameManager {
 
         this.showingEndScreen = true;
 
+        // *** IMPORTANT: Remove the gameplay key listeners when showing end screen ***
+        if (this.keydownListener) {
+            document.removeEventListener('keydown', this.keydownListener);
+            this.keydownListener = null;
+        }
+        if (this.keyupListener) {
+            document.removeEventListener('keyup', this.keyupListener);
+            this.keyupListener = null;
+        }
+
+        // Clear any pressed keys that might be stuck
+        this.pressedKeys.clear();
+
         // Calculate final stats
         this.stats.totalNotes = this.noteCount;
         const accuracy = (this.stats.perfectCount / this.stats.totalNotes) * 100;
@@ -857,8 +883,43 @@ class GameManager {
             isFullCombo: this.stats.isFullCombo
         };
 
+        // Set up a dedicated end screen input handler
+        this.setupEndScreenControls();
+
         // Show the end screen with stats
         this.endScreenUI.show(endScreenStats);
+    }
+
+    setupEndScreenControls() {
+        // Remove any existing listener first (safety check)
+        if (this.endScreenKeyListener) {
+            document.removeEventListener('keydown', this.endScreenKeyListener);
+        }
+
+        // Create a dedicated listener for the end screen
+        this.endScreenKeyListener = (event) => {
+            if (event.key === 'Enter') {
+                console.log('Enter key pressed on end screen, returning to song select');
+
+                // Handle end screen input through the EndScreenUI
+                if (this.endScreenUI.handleInput(event)) {
+                    // Clean up the end screen listener
+                    document.removeEventListener('keydown', this.endScreenKeyListener);
+                    this.endScreenKeyListener = null;
+
+                    // Call the song select callback
+                    if (this.onSongSelect) {
+                        this.onSongSelect();
+                    } else {
+                        this.handleRestart();
+                    }
+                }
+            }
+        };
+
+        // Add the end screen listener
+        document.addEventListener('keydown', this.endScreenKeyListener);
+        console.log('End screen controls set up');
     }
 
     playHitSound(key) {
@@ -928,6 +989,20 @@ class GameManager {
         this.music.pause();
         this.music.currentTime = 0;
 
+        // Remove all event listeners
+        if (this.keydownListener) {
+            document.removeEventListener('keydown', this.keydownListener);
+            this.keydownListener = null;
+        }
+        if (this.keyupListener) {
+            document.removeEventListener('keyup', this.keyupListener);
+            this.keyupListener = null;
+        }
+        if (this.endScreenKeyListener) {
+            document.removeEventListener('keydown', this.endScreenKeyListener);
+            this.endScreenKeyListener = null;
+        }
+
         // Cancel animation frame
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
@@ -947,6 +1022,7 @@ class GameManager {
         this.currentCombo = 0;
         this.gameTimer = 0;
         this.gameStarted = false;
+        this.showingEndScreen = false;
         this.pressedKeys.clear();
 
         // Clear notes and timers
@@ -964,7 +1040,6 @@ class GameManager {
 
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
 
         // Return to start menu
         if (this.onSongSelect) {

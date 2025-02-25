@@ -8,14 +8,26 @@ class SongLoader {
     // List of all available songs
     static songList = [
         { id: 'laundry', title: 'Laundry', path: './songs/Laundry.osu'},
-        { id: 'into_world', title: 'Into the World', path: './songs/Into_the_world.osu'},
+        { id: 'ketamine', title: 'Ketamine', path: './songs/Ketamine.osu'},
+        { id: 'astrid', title: 'Astrid', path: './songs/Astrid.osu'},
         { id: 'bbl_drizzy', title: 'BBL Drizzy', path: './songs/BBL_DRIZZY.osu'},
         { id: 'good_loyal', title: 'Good Loyal Thots', path: './songs/Good_Loyal_Thots.osu'},
-        { id: 'navsegda', title: 'Navsegda', path: './songs/Navsegda.osu'},
+        { id: 'rickyyyy', title: 'Ricky Bobby', path: './songs/Ricky_Bobby.osu'},
+        { id: 'grave', title: 'Grave', path: './songs/Grave.osu'},
+        { id: 'marlboro', title: 'Marlboro Nights', path: './songs/Marlboro_Nights.osu'},
+        { id: 'everything_black', title: 'Everything Black', path: './songs/Everything_Black.osu'},
         { id: 'tsunami', title: 'Tsunami', path: './songs/Tsunami.osu'},
+        { id: 'de_inferno', title: 'Carcelera', path: './songs/Carcelera.osu'},
         { id: 'paranoia', title: 'Paranoia', path: './songs/KENTENSHI_paranoia.osu'},
         { id: 'glaza', title: 'Glaza', path: './songs/Glaza.osu'},
+        { id: 'navsegda', title: 'Navsegda', path: './songs/Navsegda.osu'},
+        { id: 'risuyu_krovyu', title: 'Risuyu Krovyu', path: './songs/Risuyu_Krovyu.osu'},
         { id: 'dance_cap', title: 'Dance Cap', path: './songs/DanceCap.osu'},
+        { id: 'spiral', title: 'Spiral', path: './songs/Spiral.osu'},
+        { id: 'shikanoko', title: 'Shikanoko Remix', path: './songs/Shikanoko_Remix.osu'},
+        { id: 'hikari', title: 'Hikari', path: './songs/Hikari.osu'},
+        { id: 'otonoke', title: 'Otonoke', path: './songs/Otonoke.osu'},
+        { id: 'into_world', title: 'Into the World', path: './songs/Into_the_world.osu'},
         // Add more songs here
     ];
 

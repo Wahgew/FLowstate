@@ -142,6 +142,7 @@ class PlayerDataManager {
                 // Add new volume settings
                 scrollSoundVolume: volumeSettings.scrollSoundVolume || 0.1,
                 missSoundVolume: volumeSettings.missSoundVolume || 0.8,
+                applauseSoundVolume: volumeSettings.applauseSoundVolume || 0.3,
                 timestamp: Date.now()
             });
 
@@ -178,7 +179,8 @@ class PlayerDataManager {
                         hitSoundVolume: request.result.hitSoundVolume,
                         // Include new volume settings with fallbacks
                         scrollSoundVolume: request.result.scrollSoundVolume || 0.1,
-                        missSoundVolume: request.result.missSoundVolume || 0.8
+                        missSoundVolume: request.result.missSoundVolume || 0.8,
+                        applauseSoundVolume: request.result.applauseSoundVolume || 0.3
                     });
                 } else {
                     // Return default values if no settings found
@@ -186,7 +188,8 @@ class PlayerDataManager {
                         songVolume: 0.5,
                         hitSoundVolume: 0.4,
                         scrollSoundVolume: 0.1,
-                        missSoundVolume: 0.8
+                        missSoundVolume: 0.8,
+                        applauseSoundVolume: 0.3
                     });
                 }
             };
