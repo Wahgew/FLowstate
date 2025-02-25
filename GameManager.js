@@ -89,7 +89,7 @@ class GameManager {
         this.hitSounds = new Map();
 
         // Initialize volume settings
-        this.hitSoundVolume = 0.5;  // Default hit sound volume
+        this.hitSoundVolume = 0.4;  // Default hit sound volume
         this.songVolume = 0.5;      // Default song volume
 
         // Set initial song volume
@@ -109,6 +109,9 @@ class GameManager {
             audio.volume = this.hitSoundVolume;
             this.hitSounds.set(key, audio);
         });
+
+        // Add miss sound effect
+        this.missSound = new Audio('./effects/miss.mp3');
 
         // Timing windows for hit detection (in milliseconds)
         this.timingWindows = {
@@ -724,6 +727,7 @@ class GameManager {
                     this.currentCombo = 0; // Only reset combo on complete misses
                     this.stats.missCount++;
                     lane.notes.splice(i, 1);
+                    this.playMissSound();
 
                     console.log('Note missed:', {
                         targetTime: note.targetTime,
@@ -876,6 +880,10 @@ class GameManager {
         this.hitSounds.forEach(sound => {
             sound.volume = this.hitSoundVolume;
         });
+        // Also update miss sound volume
+        // if (this.missSound) {
+        //     this.missSound.volume = this.hitSoundVolume;
+        // }
         console.log('Hit sound volume set to:', this.hitSoundVolume);
     }
 
@@ -886,6 +894,32 @@ class GameManager {
             this.music.volume = this.songVolume;
         }
         console.log('Song volume set to:', this.songVolume);
+    }
+
+    // set miss volume
+    setMissSoundVolume(volume) {
+        this.missSoundVolume = Math.max(0, Math.min(1, volume));
+        console.log('Miss sound volume set to:', this.missSoundVolume);
+    }
+
+    // Add this method to play the miss sound
+    playMissSound() {
+        // Get volume from global state
+        let soundVolume = 0.8; // Default fallback
+
+        if (window.volumeState && typeof window.volumeState.missSoundVolume === 'number') {
+            soundVolume = window.volumeState.missSoundVolume;
+        }
+
+        // If volume is 0 or very low, don't play sound
+        if (soundVolume <= 0.01) {
+            return;
+        }
+
+        // Create a new Audio instance to allow overlapping sounds
+        const sound = new Audio('./effects/miss.mp3');
+        sound.volume = soundVolume;
+        sound.play().catch(error => console.error('Error playing miss sound:', error));
     }
 
     async handleRestart() {

@@ -218,6 +218,18 @@
                                                              max="100"
                                                              value="40">
         </div>
+        <div class="volume-group">
+            <div class="volume-label">
+                <span>Miss Sound Volume</span>
+                <span class="volume-value" id="missSoundVolumeValue">80%</span>
+            </div>
+            <label for="missSoundVolumeSlider"></label><input type="range"
+                                                              id="missSoundVolumeSlider"
+                                                              class="volume-slider"
+                                                              min="0"
+                                                              max="100"
+                                                              value="80">
+        </div>
     </div>
 
     <button id="fullscreenButton">Zen Mode (F11)</button>
@@ -317,35 +329,76 @@
     // Volume control functionality
     const songVolumeSlider = document.getElementById('songVolumeSlider');
     const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
+    const missSoundVolumeSlider = document.getElementById('missSoundVolumeSlider');
+
     const songVolumeValue = document.getElementById('songVolumeValue');
     const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+    const missSoundVolumeValue = document.getElementById('missSoundVolumeValue');
 
+    // Fixed updateVolumes function to prevent recursion
     function updateVolumes() {
-        if (window.gameManager) {
-            const songVolume = songVolumeSlider.value / 100;
-            const hitSoundVolume = hitSoundVolumeSlider.value / 100;
+        // Check if the function is already being called from Main.js
+        if (window._updatingVolumesFromMain) {
+            return; // Prevent recursive calls
+        }
 
-            window.gameManager.setSongVolume(songVolume);
-            window.gameManager.setHitSoundVolume(hitSoundVolume);
+        // Set flag to prevent recursion
+        window._updatingVolumesFromIndex = true;
 
-            songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-            hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+        try {
+            if (window.volumeState) {
+                // Update global state
+                window.volumeState.songVolume = songVolumeSlider.value / 100;
+                window.volumeState.hitSoundVolume = hitSoundVolumeSlider.value / 100;
+                window.volumeState.missSoundVolume = missSoundVolumeSlider.value / 100;
+
+                // Update display values
+                songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+                hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+                missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
+
+                // Update game manager if it exists
+                if (window.gameManager) {
+                    window.gameManager.setSongVolume(window.volumeState.songVolume);
+                    window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                }
+
+                // If updateVolumes in Main.js exists and we're not in a recursion state, call it
+                if (window.updateVolumes && !window._updatingVolumesFromMain) {
+                    window._updatingVolumesFromIndex = false; // Clear flag before calling
+                    window.updateVolumes();
+                }
+            }
+        } finally {
+            // Clear flag
+            window._updatingVolumesFromIndex = false;
         }
     }
 
+    // Add event listeners for all volume sliders
     songVolumeSlider.addEventListener('input', updateVolumes);
     hitSoundVolumeSlider.addEventListener('input', updateVolumes);
+    missSoundVolumeSlider.addEventListener('input', updateVolumes);
 
     // Store volume preferences in localStorage
     function saveVolumePreferences() {
-        localStorage.setItem('songVolume', songVolumeSlider.value);
-        localStorage.setItem('hitSoundVolume', hitSoundVolumeSlider.value);
+        if (window.playerDataManager) {
+            // If PlayerDataManager is available, save using that
+            window.playerDataManager.saveVolumeSettings(window.volumeState);
+        } else {
+            // Otherwise, save to localStorage as fallback
+            localStorage.setItem('songVolume', songVolumeSlider.value);
+            localStorage.setItem('hitSoundVolume', hitSoundVolumeSlider.value);
+            localStorage.setItem('missSoundVolume', missSoundVolumeSlider.value);
+        }
     }
 
     // Load volume preferences
     function loadVolumePreferences() {
+        // Try to get values from localStorage
         const savedSongVolume = localStorage.getItem('songVolume');
         const savedHitSoundVolume = localStorage.getItem('hitSoundVolume');
+        const savedMissSoundVolume = localStorage.getItem('missSoundVolume');
 
         if (savedSongVolume !== null) {
             songVolumeSlider.value = savedSongVolume;
@@ -353,13 +406,20 @@
         if (savedHitSoundVolume !== null) {
             hitSoundVolumeSlider.value = savedHitSoundVolume;
         }
+        if (savedMissSoundVolume !== null) {
+            missSoundVolumeSlider.value = savedMissSoundVolume;
+        }
 
-        updateVolumes();
+        // Update the volume values in UI
+        songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+        hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+        missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
     }
 
     // Save volumes when changed
     songVolumeSlider.addEventListener('change', saveVolumePreferences);
     hitSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
+    missSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
 
     // Load saved volumes when page loads
     window.addEventListener('load', loadVolumePreferences);

@@ -4,8 +4,10 @@ window.onload = async function() {
 
     // Global volume state
     window.volumeState = {
-        songVolume: 0.5,    // Default values
-        hitSoundVolume: 0.4
+        songVolume: 0.5,          // Default values
+        hitSoundVolume: 0.4,      // For note hit sounds
+        scrollSoundVolume: 0.1,   // For menu navigation
+        missSoundVolume: 0.8      // For missed notes
     };
 
     function drawLoadingScreen(progress, message) {
@@ -38,20 +40,15 @@ window.onload = async function() {
         // Load volume settings from PlayerDataManager
         const volumeSettings = await playerData.getVolumeSettings();
         if (volumeSettings) {
+            // Update volumeState with loaded settings
             window.volumeState.songVolume = volumeSettings.songVolume;
             window.volumeState.hitSoundVolume = volumeSettings.hitSoundVolume;
-
-            // Update sliders to match loaded values
-            const songVolumeSlider = document.getElementById('songVolumeSlider');
-            const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
-            const songVolumeValue = document.getElementById('songVolumeValue');
-            const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
-
-            songVolumeSlider.value = volumeSettings.songVolume * 100;
-            hitSoundVolumeSlider.value = volumeSettings.hitSoundVolume * 100;
-            songVolumeValue.textContent = `${Math.round(volumeSettings.songVolume * 100)}%`;
-            hitSoundVolumeValue.textContent = `${Math.round(volumeSettings.hitSoundVolume * 100)}%`;
+            window.volumeState.scrollSoundVolume = volumeSettings.scrollSoundVolume || 0.0;
+            window.volumeState.missSoundVolume = volumeSettings.missSoundVolume || 0.8; // Default to 0.8 if not found
         }
+
+        // Initialize the volume control sliders
+        initializeVolumeControls();
 
         // Initialize song loader
         const songLoader = new SongLoader();
@@ -78,9 +75,10 @@ window.onload = async function() {
                     data: selectedSong.data
                 }, playerData);
 
-                // Use current volume state instead of hardcoded values
-                window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                // Use global volume state
                 window.gameManager.setSongVolume(window.volumeState.songVolume);
+                window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                window.gameManager.setMissSoundVolume(window.volumeState.missSoundVolume);
 
                 window.gameManager.onSongSelect = () => {
                     window.gameManager.music.pause();
@@ -91,29 +89,50 @@ window.onload = async function() {
             }
         });
 
-        // Update volume handler
+        // Update the updateVolumes function in Main.js
         window.updateVolumes = async function() {
-            const songVolumeSlider = document.getElementById('songVolumeSlider');
-            const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
-            const songVolumeValue = document.getElementById('songVolumeValue');
-            const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+            // Set flag to prevent recursion from index.html script
+            window._updatingVolumesFromMain = true;
 
-            // Update global state
-            window.volumeState.songVolume = songVolumeSlider.value / 100;
-            window.volumeState.hitSoundVolume = hitSoundVolumeSlider.value / 100;
+            try {
+                const songVolumeSlider = document.getElementById('songVolumeSlider');
+                const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
+                const missSoundVolumeSlider = document.getElementById('missSoundVolumeSlider');
 
-            // Update display
-            songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-            hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+                // Exit if any element is missing
+                if (!songVolumeSlider || !hitSoundVolumeSlider || !missSoundVolumeSlider) {
+                    console.error('Missing volume slider elements');
+                    return;
+                }
 
-            // Update game manager if it exists
-            if (window.gameManager) {
-                window.gameManager.setSongVolume(window.volumeState.songVolume);
-                window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                const songVolumeValue = document.getElementById('songVolumeValue');
+                const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+                const missSoundVolumeValue = document.getElementById('missSoundVolumeValue');
+
+                // Update global state
+                window.volumeState.songVolume = songVolumeSlider.value / 100;
+                window.volumeState.hitSoundVolume = hitSoundVolumeSlider.value / 100;
+                window.volumeState.missSoundVolume = missSoundVolumeSlider.value / 100;
+
+                // Update display values if elements exist
+                if (songVolumeValue) songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+                if (hitSoundVolumeValue) hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+                if (missSoundVolumeValue) missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
+
+                // Update game manager if it exists
+                if (window.gameManager) {
+                    window.gameManager.setSongVolume(window.volumeState.songVolume);
+                    window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
+                }
+
+                // Save to PlayerDataManager
+                if (window.playerDataManager) {
+                    await window.playerDataManager.saveVolumeSettings(window.volumeState);
+                }
+            } finally {
+                // Clear flag
+                window._updatingVolumesFromMain = false;
             }
-
-            // Save to PlayerDataManager
-            await playerData.saveVolumeSettings(window.volumeState);
         };
 
     } catch (error) {
@@ -126,3 +145,39 @@ window.onload = async function() {
         ctx.fillText('Error loading game resources', canvas.width / 2, canvas.height / 2);
     }
 };
+
+// Function to initialize volume sliders with values from volumeState
+function initializeVolumeControls() {
+    // Get references to all sliders and display elements
+    const songVolumeSlider = document.getElementById('songVolumeSlider');
+    const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
+    const missSoundVolumeSlider = document.getElementById('missSoundVolumeSlider');
+
+    const songVolumeValue = document.getElementById('songVolumeValue');
+    const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
+    const missSoundVolumeValue = document.getElementById('missSoundVolumeValue');
+
+    // Make sure volumeState exists
+    if (!window.volumeState) {
+        console.error('Volume state not available');
+        return;
+    }
+
+    // Make sure the elements exist before setting values
+    if (!songVolumeSlider || !hitSoundVolumeSlider || !missSoundVolumeSlider) {
+        console.error('Volume slider elements not found');
+        return;
+    }
+
+    console.log('Initializing volume controls with:', window.volumeState);
+
+    // Update slider values from volumeState (convert from 0-1 to 0-100)
+    songVolumeSlider.value = Math.round(window.volumeState.songVolume * 100);
+    hitSoundVolumeSlider.value = Math.round(window.volumeState.hitSoundVolume * 100);
+    missSoundVolumeSlider.value = Math.round(window.volumeState.missSoundVolume * 100);
+
+    // Update display text if elements exist
+    if (songVolumeValue) songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+    if (hitSoundVolumeValue) hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+    if (missSoundVolumeValue) missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
+}

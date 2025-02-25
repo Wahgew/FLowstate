@@ -139,6 +139,9 @@ class PlayerDataManager {
                 id: 'volumeSettings',
                 songVolume: volumeSettings.songVolume,
                 hitSoundVolume: volumeSettings.hitSoundVolume,
+                // Add new volume settings
+                scrollSoundVolume: volumeSettings.scrollSoundVolume || 0.1,
+                missSoundVolume: volumeSettings.missSoundVolume || 0.8,
                 timestamp: Date.now()
             });
 
@@ -172,13 +175,18 @@ class PlayerDataManager {
                 if (request.result) {
                     resolve({
                         songVolume: request.result.songVolume,
-                        hitSoundVolume: request.result.hitSoundVolume
+                        hitSoundVolume: request.result.hitSoundVolume,
+                        // Include new volume settings with fallbacks
+                        scrollSoundVolume: request.result.scrollSoundVolume || 0.1,
+                        missSoundVolume: request.result.missSoundVolume || 0.8
                     });
                 } else {
                     // Return default values if no settings found
                     resolve({
                         songVolume: 0.5,
-                        hitSoundVolume: 0.4
+                        hitSoundVolume: 0.4,
+                        scrollSoundVolume: 0.1,
+                        missSoundVolume: 0.8
                     });
                 }
             };

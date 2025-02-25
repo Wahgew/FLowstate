@@ -13,6 +13,17 @@ class SongSelectUI {
         this.songBoxHeight = 80;
         this.spacing = 20;
 
+        // New properties for circular scrolling
+        this.visibleSongsCount = 8; // Number of songs visible at once
+        this.isAnimating = false;
+        this.animationProgress = 0;
+        this.animationDirection = 0; // 1 for down, -1 for up
+        this.animationSpeed = 1; // Controls animation speed (0-1)
+        this.previousSelectedIndex = 0;
+
+        // Animation frame request ID
+        this.animationFrameId = null;
+
         // Load all song records when initializing
         this.loadSongRecords();
     }
@@ -31,14 +42,91 @@ class SongSelectUI {
 
     show() {
         this.isVisible = true;
-        this.loadSongRecords().then(() => this.draw());
+        this.loadSongRecords().then(() => {
+            this.startAnimationLoop();
+            this.updateSoundVolume();
+            this.draw();
+        });
     }
 
     hide() {
         this.isVisible = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
     }
 
-    async draw() {
+    // Update sound volume based on global settings
+    updateSoundVolume() {
+        // We don't need to update the base sound object volume
+        // as we're getting the volume directly when playing the sound
+
+        // Log current volume settings for debugging
+        if (window.volumeState) {
+            console.log('Current volume state:', {
+                hitSoundVolume: window.volumeState.hitSoundVolume,
+                songVolume: window.volumeState.songVolume
+            });
+        } else {
+            console.log('Volume state not available');
+        }
+    }
+
+    // Method to play scroll sound effect
+    playScrollSound() {
+        // Get volume directly from global state
+        if (!window.volumeState || typeof window.volumeState.scrollSoundVolume !== 'number') {
+            console.log('No volume state available, using default');
+            return; // Exit if no volume state
+        }
+
+        // Check if volume is 0 or very low, don't play sound
+        if (window.volumeState.scrollSoundVolume <= 0.01) {
+            console.log('Scroll sound muted, volume:', window.volumeState.scrollSoundVolume);
+            return;
+        }
+
+        // Create a new audio instance to allow overlapping sounds
+        const sound = new Audio('./effects/minimal-pop-click-ui-8.mp3');
+
+        // Set the volume from global state
+        sound.volume = window.volumeState.scrollSoundVolume;
+
+        console.log('Playing scroll sound with volume:', window.volumeState.scrollSoundVolume);
+
+        // Play the sound
+        sound.play().catch(error => {
+            console.error('Error playing scroll sound:', error);
+        });
+    }
+
+    startAnimationLoop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+
+        const animate = () => {
+            if (!this.isVisible) return;
+
+            if (this.isAnimating) {
+                // Update animation progress
+                this.animationProgress += this.animationSpeed;
+                if (this.animationProgress >= 1) {
+                    this.animationProgress = 0;
+                    this.isAnimating = false;
+                }
+
+                this.draw();
+            }
+
+            this.animationFrameId = requestAnimationFrame(animate);
+        };
+
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    draw() {
         if (!this.isVisible) return;
 
         // Clear canvas
@@ -51,16 +139,22 @@ class SongSelectUI {
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Song Selection', this.canvas.width / 2, 60);
 
-        // Draw song boxes
-        const songs = this.songLoader.getAllSongs();
-        const startY = 120;
+        // Get visible songs with their original indices
+        const visibleSongs = this.getVisibleSongs();
 
-        songs.forEach((song, index) => {
-            const y = startY + (index * (this.songBoxHeight + this.spacing));
+        // Draw song boxes
+        visibleSongs.forEach((song, visibleIndex) => {
+            const originalIndex = song.originalIndex !== undefined ? song.originalIndex : visibleIndex;
+            const y = this.getYPosition(visibleIndex);
+
+            // Skip if offscreen (for animation)
+            if (y < 80 || y > this.canvas.height - 150) return;
+
+            const isSelected = originalIndex === this.selectedIndex;
             const record = this.songRecords.get(song.id);
 
-            // Draw box background
-            this.ctx.fillStyle = index === this.selectedIndex ? '#444' : '#222';
+            // Draw box background with a highlight for selected item
+            this.ctx.fillStyle = isSelected ? '#444' : '#222';
             this.ctx.fillRect(
                 (this.canvas.width - this.songBoxWidth) / 2,
                 y,
@@ -98,6 +192,12 @@ class SongSelectUI {
             }
         });
 
+        // Draw scroll indicators if there are more songs than visible area
+        const songs = this.songLoader.getAllSongs();
+        if (songs.length > this.visibleSongsCount) {
+            this.drawScrollIndicators();
+        }
+
         // Draw instructions
         this.ctx.font = '20px nunito';
         this.ctx.fillStyle = 'white';
@@ -118,24 +218,97 @@ class SongSelectUI {
         });
     }
 
+    drawScrollIndicators() {
+        const centerX = this.canvas.width / 2;
+
+        // Draw up indicator (if not at the top or if wrapping is enabled)
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - 15, 95);
+        this.ctx.lineTo(centerX + 15, 95);
+        this.ctx.lineTo(centerX, 80);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Draw down indicator (if not at the bottom or if wrapping is enabled)
+        const bottomY = this.getYPosition(this.visibleSongsCount) + 10;
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX - 15, bottomY);
+        this.ctx.lineTo(centerX + 15, bottomY);
+        this.ctx.lineTo(centerX, bottomY + 15);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
     handleInput(event) {
-        if (!this.isVisible) return;
+        if (!this.isVisible || this.isAnimating) return;
 
         const songs = this.songLoader.getAllSongs();
+        this.previousSelectedIndex = this.selectedIndex;
 
         switch(event.key) {
             case 'ArrowUp':
                 this.selectedIndex = (this.selectedIndex - 1 + songs.length) % songs.length;
+                this.animationDirection = 1; // Scrolling up means content moves down
+                this.isAnimating = true;
+                this.animationProgress = 0;
+                this.playScrollSound();
                 this.draw();
                 break;
+
             case 'ArrowDown':
                 this.selectedIndex = (this.selectedIndex + 1) % songs.length;
+                this.animationDirection = -1; // Scrolling down means content moves up
+                this.isAnimating = true;
+                this.animationProgress = 0;
+                this.playScrollSound();
                 this.draw();
                 break;
+
             case 'Enter':
                 return songs[this.selectedIndex];
         }
 
         return null;
+    }
+
+    getVisibleSongs() {
+        const songs = this.songLoader.getAllSongs();
+        const totalSongs = songs.length;
+
+        if (totalSongs <= this.visibleSongsCount) {
+            return songs; // Return all songs if we have fewer than visible count
+        }
+
+        // Get the visible range of indices
+        const visibleSongs = [];
+        let startIndex = this.selectedIndex - Math.floor(this.visibleSongsCount / 2);
+
+        // Adjust for circular wrapping
+        for (let i = 0; i < this.visibleSongsCount; i++) {
+            let index = (startIndex + i) % totalSongs;
+            if (index < 0) index += totalSongs; // Handle negative indices
+            visibleSongs.push({
+                ...songs[index],
+                originalIndex: index // Store the original index for selection
+            });
+        }
+
+        return visibleSongs;
+    }
+
+    getYPosition(index, offset = 0) {
+        const startY = 120;
+        let position = startY + (index * (this.songBoxHeight + this.spacing));
+
+        // Apply animation offset if animating
+        if (this.isAnimating) {
+            const animationOffset = this.animationDirection *
+                (this.songBoxHeight + this.spacing) *
+                this.animationProgress;
+            position += animationOffset;
+        }
+
+        return position + offset;
     }
 }
