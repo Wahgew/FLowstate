@@ -7,6 +7,7 @@ class SongLoader {
 
     // List of all available songs
     static songList = [
+        { id: 'laundry', title: 'Laundry', path: './songs/Laundry.osu'},
         { id: 'into_world', title: 'Into the World', path: './songs/Into_the_world.osu'},
         { id: 'bbl_drizzy', title: 'BBL Drizzy', path: './songs/BBL_DRIZZY.osu'},
         { id: 'good_loyal', title: 'Good Loyal Thots', path: './songs/Good_Loyal_Thots.osu'},
