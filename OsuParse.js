@@ -94,7 +94,7 @@ class OsuParser {
         const travelTimeMs = (distanceToTravel / (scrollSpeed * 60)) * 1000;
 
         // Initialize 4 lanes
-        const lanes = Array(4).fill(null).map(() => ({ notes: [] }));
+        const lanes = Array(4).fill(null).map(() => ({notes: []}));
 
         // Process hit objects
         for (const hitObject of osuData.hitObjects) {
@@ -117,7 +117,7 @@ class OsuParser {
             }
         }
 
-        return {
+        const result = {
             songPath: `songs/${osuData.general.AudioFilename}`,
             bpm: bpm,
             msPerBeat: msPerBeat,
@@ -126,8 +126,87 @@ class OsuParser {
             hitLineY: hitLineY,
             sheet: lanes
         };
+
+        result.difficulty = this.estimateDifficulty(result);
+        return result;
+
     }
 
+    estimateDifficulty(songData) {
+        // Calculate note density (notes per second)
+        let totalNotes = 0;
+        let totalDuration = 0;
+
+        songData.sheet.forEach(lane => {
+            totalNotes += lane.notes.length;
+
+            if (lane.notes.length > 0) {
+                const lastNoteTime = Math.max(...lane.notes.map(note => note.hitTime));
+                totalDuration = Math.max(totalDuration, lastNoteTime);
+            }
+        });
+
+        // Avoid division by zero
+        if (totalDuration <= 0) return 1.0;
+
+        const notesPerSecond = totalNotes / totalDuration;
+
+        // Check for stream patterns (close consecutive notes in the same lane)
+        let streamCount = 0;
+        songData.sheet.forEach(lane => {
+            if (lane.notes.length < 2) return;
+
+            const notes = lane.notes.sort((a, b) => a.hitTime - b.hitTime);
+
+            for (let i = 1; i < notes.length; i++) {
+                const timeBetweenNotes = notes[i].hitTime - notes[i-1].hitTime;
+                if (timeBetweenNotes < 0.25) { // Less than 250ms between notes
+                    streamCount++;
+                }
+            }
+        });
+
+        // Calculate technical difficulty based on multi-lane patterns
+        let jumpCount = 0;
+
+        // Create a chronological list of all notes with their lane info
+        const allNotes = [];
+        songData.sheet.forEach((lane, laneIndex) => {
+            lane.notes.forEach(note => {
+                allNotes.push({
+                    laneIndex,
+                    hitTime: note.hitTime
+                });
+            });
+        });
+
+        // Sort by time
+        allNotes.sort((a, b) => a.hitTime - b.hitTime);
+
+        // Check for lane jumps (harder patterns)
+        for (let i = 1; i < allNotes.length; i++) {
+            const laneDistance = Math.abs(allNotes[i].laneIndex - allNotes[i-1].laneIndex);
+            const timeDistance = allNotes[i].hitTime - allNotes[i-1].hitTime;
+
+            if (laneDistance >= 2 && timeDistance < 0.3) {
+                jumpCount++;
+            }
+        }
+
+        // Calculate difficulty factors based on your game's mechanics
+        const noteDensityFactor = Math.min(2.5, notesPerSecond * 0.6); // How many notes per second
+        const streamFactor = Math.min(1.5, streamCount / Math.max(10, totalNotes) * 4); // How many stream patterns
+        const jumpFactor = Math.min(1.5, jumpCount / Math.max(1, allNotes.length) * 5); // How many jumps between lanes
+
+        // Base difficulty scale from 1.0 to 4.5 (matching typical osu! scale)
+        let difficulty = 1.0 + noteDensityFactor + streamFactor + jumpFactor;
+
+        // Cap difficulty at 4.5
+        difficulty = Math.min(4.5, difficulty);
+
+        // Round to one decimal
+        return Math.round(difficulty * 10) / 10;
+    }
 }
 
 function loadOsuFile(fileContent) {

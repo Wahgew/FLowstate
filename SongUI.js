@@ -175,10 +175,15 @@ class SongSelectUI {
                 this.ctx.fillText('FC✦', boxLeft + 10, y + (this.songBoxHeight / 2) + 8);
             }
 
-            // Draw song title in center
+            // Draw song title in center (slightly higher to make room for difficulty stars)
             this.ctx.fillStyle = 'white';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(song.title, boxCenterX, y + (this.songBoxHeight / 2) + 8);
+            this.ctx.fillText(song.title, boxCenterX, y + (this.songBoxHeight / 2) - 5);
+
+            // Draw difficulty stars below title
+            this.ctx.font = '16px nunito';
+            this.ctx.fillStyle = this.getDifficultyColor(song.difficulty || 3);
+            this.ctx.fillText(this.getDifficultyStars(song.difficulty || 3), boxCenterX, y + (this.songBoxHeight / 2) + 20);
 
             // Draw grade on right if exists
             this.ctx.font = '40px nunito';
@@ -295,6 +300,44 @@ class SongSelectUI {
         }
 
         return visibleSongs;
+    }
+
+    getDifficultyColor(difficulty) {
+        // Returns a color based on osu! difficulty scale (0-5)
+        if (difficulty >= 4.0) return '#ff0000'; // Red for Expert
+        if (difficulty >= 3.0) return '#ff6600'; // Orange for Hard
+        if (difficulty >= 2.0) return '#ffcc00'; // Yellow for Normal
+        return '#00cc00'; // Green for Easy
+    }
+
+    getDifficultyStars(difficulty) {
+        // Calculate stars on a scale of 0-5
+        // For osu! beatmaps, we'll use a more gentle curve to map 1.0-4.5 difficulty to 1-5 stars
+        // This makes the stars spread out more visually across our beatmap set
+        const stars = Math.min(5, Math.max(1, Math.round(difficulty * 1.2)));
+        const maxStars = 5;
+
+        let starDisplay = '';
+
+        // Add filled stars
+        for (let i = 0; i < stars; i++) {
+            starDisplay += '★';
+        }
+
+        // Add empty stars
+        for (let i = stars; i < maxStars; i++) {
+            starDisplay += '☆';
+        }
+
+        return starDisplay;
+    }
+
+    getDifficultyText(difficulty) {
+        // Using osu! difficulty naming conventions
+        if (difficulty >= 4.0) return 'Expert';
+        if (difficulty >= 3.0) return 'Hard';
+        if (difficulty >= 2.0) return 'Normal';
+        return 'Easy';
     }
 
     getYPosition(index, offset = 0) {

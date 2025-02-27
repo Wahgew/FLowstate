@@ -51,6 +51,15 @@ class GameManager {
         this.noteCount = 0;
         this.gameTimer = 0;
 
+        // timing lines
+        this.timingLines = [];
+        this.timingLineSpacing = 2.0 // line spacing occurrence
+        this.showTimingLines = true;
+
+        // timer display
+        this.songLength = 0;
+        this.timeRemaining = 0;
+
         // Convert AR to actual timing
         this.approachRate = 3; // Configurable AR
         this.approachDuration = 1200 - (150 * this.approachRate); // Time note is visible in ms
@@ -196,6 +205,7 @@ class GameManager {
             });
         });
 
+        this.initializeTimingLines();
         this.isRunning = true;
         this.lastFrameTime = performance.now();
         this.gameLoop(this.lastFrameTime);
@@ -312,6 +322,38 @@ class GameManager {
         // Add the gameplay listeners
         document.addEventListener('keydown', this.keydownListener);
         document.addEventListener('keyup', this.keyupListener);
+    }
+
+    // inti visual timing lines
+    initializeTimingLines() {
+        if (!this.music || !this.showTimingLines) return;
+
+        // Clear existing timing lines
+        this.timingLines = [];
+
+        // Calculate total song length in seconds
+        this.songLength = this.music.duration;
+        this.timeRemaining = this.songLength;
+
+        // Don't create lines if the song is too short
+        if (this.songLength <= 0) return;
+
+        // Create timing lines evenly spaced across the song - simplified approach
+        const lineCount = Math.floor(this.songLength / this.timingLineSpacing);
+
+        for (let i = 0; i < lineCount; i++) {
+            const hitTime = i * this.timingLineSpacing;
+
+            // No overlap check - just add all lines with even spacing
+            this.timingLines.push({
+                hitTime: hitTime,
+                position: { y: this.spawnY },
+                active: true,
+                spawnTime: (hitTime * 1000) // Store spawn time in ms
+            });
+        }
+
+        console.log(`Created ${this.timingLines.length} timing lines for ${this.songLength}s song`);
     }
 
     cleanupResources() {
@@ -465,6 +507,9 @@ class GameManager {
         this.ctx.fillStyle = 'black';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // Draw timing lines (behind lanes and notes)
+        this.drawTimingLines();
+
         // Draw game elements
         this.drawLaneSeparators();
         this.drawGameplayHitZones();
@@ -487,6 +532,8 @@ class GameManager {
             this.drawCenteredText(this.currentCombo.toString(), 400, '40px');
         }
 
+        this.drawTimer();
+
         // Draw key hints
         this.ctx.font = '20px nunito';
         this.lanes.forEach(lane => {
@@ -504,7 +551,7 @@ class GameManager {
             const barWidth = 200;
             const barHeight = 10;
             const x = (this.canvas.width - barWidth) / 2;
-            const y = 20;
+            const y = 80;
 
             // Background
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -519,7 +566,7 @@ class GameManager {
                 this.ctx.fillStyle = 'white';
                 this.ctx.font = '14px nunito';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('Hold R to restart', this.canvas.width / 2, y + 25);
+                this.ctx.fillText('Hold R to restart', this.canvas.width / 2, y + 30);
             }
         }
         //this.checkSongEnd();
@@ -601,6 +648,27 @@ class GameManager {
                 }
             });
         });
+    }
+
+    drawTimingLines() {
+        if (!this.showTimingLines) return;
+
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // Subtle gray for timing lines
+        this.ctx.lineWidth = 2;
+
+        this.timingLines.forEach(line => {
+            if (line.active && line.position.y >= this.spawnY) {
+                // Draw a dashed line across all lanes
+                this.ctx.beginPath();
+                //this.ctx.setLineDash([5, 10]); // Create dashed line
+                this.ctx.moveTo(this.laneStartX, line.position.y);
+                this.ctx.lineTo(this.laneStartX + (this.laneWidth * 4), line.position.y);
+                this.ctx.stroke();
+            }
+        });
+
+        // Reset line style
+        //this.ctx.setLineDash([]);
     }
 
     drawHitText() {
@@ -705,16 +773,58 @@ class GameManager {
         this.endScreenUI.drawEndScreen(stats);
     }
 
+    drawTimer() {
+        // Only draw if we have a valid song length
+        if (this.songLength <= 0) return;
+
+        const minutes = Math.floor(this.timeRemaining / 60);
+        const seconds = Math.floor(this.timeRemaining % 60);
+        const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        // Draw timer in the bottom right corner
+        this.ctx.font = '24px nunito';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(timeText, this.canvas.width - 20, this.canvas.height - 20);
+
+        // Reset text alignment
+        this.ctx.textAlign = 'left';
+    }
+
+
     // Add method to check for missed notes in update loop
     update() {
         const currentTime = (performance.now() - this.startTime) / 1000;
         this.gameTimer = currentTime * 1000;
+
+        // Update time remaining
+        if (this.music && this.music.duration > 0) {
+            this.timeRemaining = Math.max(0, this.music.duration - this.music.currentTime);
+        }
 
         this.cleanupResources();
 
         // Auto-play handling
         if (this.autoPlay) {
             this.handleAutoPlay();
+        }
+
+        // Update timing lines
+        if (this.showTimingLines) {
+            // Update active timing lines - same logic as notes to ensure consistent speed
+            this.timingLines.forEach(line => {
+                if (line.active) {
+                    // Calculate position based on current time - this ensures lines move at exactly the same speed as notes
+                    const elapsedTime = this.gameTimer - line.spawnTime;
+                    const progress = elapsedTime / this.approachDuration;
+                    line.position.y = this.spawnY + (this.distanceToHitLine * progress);
+
+                    // Deactivate line if it's past the hit zone
+                    if (line.position.y > this.hitZoneY + 100) {
+                        line.active = false;
+                    }
+                }
+            });
         }
 
         // Check for missed notes in each lane
@@ -740,14 +850,15 @@ class GameManager {
                     });
                 }
             }
+        });
 
-            // Update remaining notes
+        // Update remaining notes
+        this.lanes.forEach(lane => {
             lane.notes.forEach(note => {
                 note.position.y += this.noteSpeed;
             });
         });
 
-        //this.frameCount++;
         this.lastFrameTime = performance.now();
     }
 
@@ -1137,6 +1248,16 @@ class GameManager {
         }
 
         this.gameStarted = true;
+
+        // Initialize song length and timer
+        this.music.addEventListener('loadedmetadata', () => {
+            this.songLength = this.music.duration;
+            this.timeRemaining = this.songLength;
+            console.log(`Song loaded, duration: ${this.songLength}s`);
+
+            // Initialize timing lines now that we know the song length
+            this.initializeTimingLines();
+        });
 
         if (this.autoPlay) {
             console.log('Starting in auto-play mode with preloaded timings:', {
