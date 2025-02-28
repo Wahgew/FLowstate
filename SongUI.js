@@ -303,18 +303,18 @@ class SongSelectUI {
     }
 
     getDifficultyColor(difficulty) {
-        // Returns a color based on osu! difficulty scale (0-5)
-        if (difficulty >= 4.0) return '#ff0000'; // Red for Expert
-        if (difficulty >= 3.0) return '#ff6600'; // Orange for Hard
-        if (difficulty >= 2.0) return '#ffcc00'; // Yellow for Normal
-        return '#00cc00'; // Green for Easy
+        // Returns a color based on the 1-5 star scale
+        if (difficulty >= 4.8) return '#ff0000'; // 5 stars: Red
+        if (difficulty >= 3.8) return '#ff44aa'; // 4 stars: Pink/magenta
+        if (difficulty >= 2.8) return '#ff6600'; // 3 stars: Orange
+        if (difficulty >= 1.8) return '#ffcc00'; // 2 stars: Yellow
+        return '#00cc00';                       // 1 star: Green
     }
 
     getDifficultyStars(difficulty) {
-        // Calculate stars on a scale of 0-5
-        // For osu! beatmaps, we'll use a more gentle curve to map 1.0-4.5 difficulty to 1-5 stars
-        // This makes the stars spread out more visually across our beatmap set
-        const stars = Math.min(5, Math.max(1, Math.round(difficulty * 1.2)));
+        // Convert difficulty (1.0-5.0) directly to 1-5 stars
+        // No scaling applied - just round to nearest star
+        const stars = Math.round(difficulty);
         const maxStars = 5;
 
         let starDisplay = '';
@@ -333,10 +333,11 @@ class SongSelectUI {
     }
 
     getDifficultyText(difficulty) {
-        // Using osu! difficulty naming conventions
-        if (difficulty >= 4.0) return 'Expert';
-        if (difficulty >= 3.0) return 'Hard';
-        if (difficulty >= 2.0) return 'Normal';
+        // Match text to the star rating
+        if (difficulty >= 4.8) return 'Expert';
+        if (difficulty >= 3.8) return 'Hard';
+        if (difficulty >= 2.8) return 'Normal+';
+        if (difficulty >= 1.8) return 'Normal';
         return 'Easy';
     }
 
