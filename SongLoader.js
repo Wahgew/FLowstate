@@ -1,8 +1,9 @@
 class SongLoader {
     constructor() {
         this.songs = [];
-        this.isLoading = false;
+        this.isLoading = true;
         this.loadingProgress = 0;
+        this.onProgressUpdate = null;
     }
 
     // List of all available songs
@@ -43,16 +44,17 @@ class SongLoader {
                 const osuContent = await response.text();
                 const songData = loadOsuFile(osuContent);
 
-                // Use the calculated difficulty if available, otherwise use manual rating
-                const difficulty = /*songData.difficulty ||*/ song.difficulty;
-
                 this.songs.push({
                     ...song,
-                    difficulty: difficulty, // Use the calculated difficulty
                     data: songData
                 });
 
                 this.loadingProgress = ((i + 1) / totalSongs) * 100;
+
+                // Report progress if callback exists
+                if (typeof this.onProgressUpdate === 'function') {
+                    this.onProgressUpdate(this.loadingProgress);
+                }
             }
 
             this.isLoading = false;

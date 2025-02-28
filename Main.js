@@ -12,9 +12,11 @@ window.onload = async function() {
     };
 
     function drawLoadingScreen(progress, message) {
+        // Clear the canvas first
         ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Draw loading message
         ctx.font = '40px nunito';
         ctx.fillStyle = 'white';
         ctx.textAlign = 'center';
@@ -26,19 +28,34 @@ window.onload = async function() {
         const x = (canvas.width - barWidth) / 2;
         const y = canvas.height / 2;
 
+        // Draw progress bar border
         ctx.strokeStyle = 'white';
         ctx.strokeRect(x, y, barWidth, barHeight);
+
+        // Calculate progress width (ensure it's between 0 and barWidth)
+        const progressWidth = Math.max(0, Math.min(barWidth, barWidth * (progress / 100)));
+
+        // Draw progress bar fill
         ctx.fillStyle = 'white';
-        ctx.fillRect(x, y, barWidth * (progress / 100), barHeight);
+        ctx.fillRect(x, y, progressWidth, barHeight);
+
+        // Log progress to console for debugging
+        console.log(`Loading progress: ${progress.toFixed(1)}%`);
     }
 
     try {
+        // Show initial loading screen
+        drawLoadingScreen(0, 'Initializing...');
+
         // Initialize PlayerDataManager first
+        drawLoadingScreen(5, 'Loading Player Data...');
         const playerData = new PlayerDataManager();
         await playerData.initializeDB();
         window.playerDataManager = playerData;
+        drawLoadingScreen(20, 'Player Data Loaded');
 
         // Load volume settings from PlayerDataManager
+        drawLoadingScreen(25, 'Loading Settings...');
         const volumeSettings = await playerData.getVolumeSettings();
         if (volumeSettings) {
             // Update volumeState with loaded settings
@@ -47,21 +64,35 @@ window.onload = async function() {
             window.volumeState.scrollSoundVolume = volumeSettings.scrollSoundVolume || 0.0;
             window.volumeState.missSoundVolume = volumeSettings.missSoundVolume || 0.8; // Default to 0.8 if not found
         }
+        drawLoadingScreen(35, 'Settings Loaded');
 
         // Initialize the volume control sliders
+        drawLoadingScreen(40, 'Initializing Controls...');
         initializeVolumeControls();
+        drawLoadingScreen(45, 'Controls Initialized');
 
         // Initialize song loader
+        drawLoadingScreen(50, 'Loading Songs...');
         const songLoader = new SongLoader();
-        drawLoadingScreen(0, 'Loading Songs...');
-        await songLoader.loadAllSongs();
 
-        // Load all player records
-        drawLoadingScreen(50, 'Loading Player Data...');
+        // Create a progress update callback for song loading
+        songLoader.onProgressUpdate = (progress) => {
+            // Map the song loader progress (0-100) to our overall progress (50-90)
+            const mappedProgress = 50 + (progress * 0.4); // Maps 0-100 to 50-90
+            drawLoadingScreen(mappedProgress, 'Loading Songs...');
+        };
+
+        // Load all songs (with progress updates)
+        await songLoader.loadAllSongs();
+        drawLoadingScreen(90, 'Songs Loaded');
 
         // Initialize song selection UI
         const songSelect = new SongSelectUI(canvas, songLoader, playerData);
         songSelect.show();
+        drawLoadingScreen(100, 'Done!');
+
+        // Brief delay to show 100% completion
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         // Handle keyboard input for song selection
         document.addEventListener('keydown', (event) => {
@@ -144,6 +175,8 @@ window.onload = async function() {
         ctx.fillStyle = 'red';
         ctx.textAlign = 'center';
         ctx.fillText('Error loading game resources', canvas.width / 2, canvas.height / 2);
+        ctx.font = '18px nunito';
+        ctx.fillText(error.message, canvas.width / 2, canvas.height / 2 + 30);
     }
 };
 
