@@ -1,3 +1,7 @@
+// depreciated and will never be used.
+// out of respect of the time I spend hard coding the notes
+// this is kept in due of the time spent on it.
+/*
 // // songData.js
 // const exampleSong = {
 //     title: "Test Song",
@@ -495,3 +499,4 @@
 //         }
 //     ]
 // };
+*/
