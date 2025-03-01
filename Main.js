@@ -88,16 +88,7 @@ window.onload = async function() {
 
         // Initialize song selection UI
         const songSelect = new SongSelectUI(canvas, songLoader, playerData);
-        songSelect.show();
-        drawLoadingScreen(100, 'Done!');
-
-        // Brief delay to show 100% completion
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Handle keyboard input for song selection
-        document.addEventListener('keydown', (event) => {
-            const selectedSong = songSelect.handleInput(event);
-
+        songSelect.onSongSelect = (selectedSong) => {
             if (selectedSong) {
                 songSelect.hide();
 
@@ -119,6 +110,16 @@ window.onload = async function() {
                     songSelect.show();
                 };
             }
+        };
+        songSelect.show();
+        drawLoadingScreen(100, 'Done!');
+
+        // Brief delay to show 100% completion
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Handle keyboard input for song selection
+        document.addEventListener('keydown', (event) => {
+            songSelect.handleInput(event);
         });
 
         // Update the updateVolumes function in Main.js

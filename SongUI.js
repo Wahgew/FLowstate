@@ -21,6 +21,14 @@ class SongSelectUI {
         this.animationSpeed = 1; // Controls animation speed (0-1)
         this.previousSelectedIndex = 0;
 
+        // Mouse interaction properties
+        this.mousePosition = { x: 0, y: 0 };
+        this.hoveredIndex = -1; // Song index being hovered
+        this.isMouseOverSong = false;
+
+        // Set up mouse event listeners
+        this.setupMouseListeners();
+
         // Animation frame request ID
         this.animationFrameId = null;
 
@@ -38,6 +46,143 @@ class SongSelectUI {
         } catch (error) {
             console.error('Failed to load song records:', error);
         }
+    }
+
+    // Add this method to set up mouse event listeners
+    setupMouseListeners() {
+        // Mouse move handler for hover effects
+        this.canvas.addEventListener('mousemove', (event) => {
+            if (!this.isVisible) return;
+
+            // Get mouse position relative to canvas
+            const rect = this.canvas.getBoundingClientRect();
+            const scale = this.canvas.width / rect.width; // Handle scaling
+            this.mousePosition = {
+                x: (event.clientX - rect.left) * scale,
+                y: (event.clientY - rect.top) * scale
+            };
+
+            // Check if mouse is over any song box
+            this.checkMouseOverSongs();
+
+            // Redraw UI to show hover effects
+            this.draw();
+        });
+
+        // Mouse click handler - simplified to play song immediately
+        this.canvas.addEventListener('click', (event) => {
+            if (!this.isVisible || this.isAnimating) return;
+
+            // Get mouse position relative to canvas
+            const rect = this.canvas.getBoundingClientRect();
+            const scale = this.canvas.width / rect.width; // Handle scaling
+            this.mousePosition = {
+                x: (event.clientX - rect.left) * scale,
+                y: (event.clientY - rect.top) * scale
+            };
+
+            // Check which song is being clicked
+            this.checkMouseOverSongs();
+
+            // If mouse is over a song, select and play it immediately
+            if (this.isMouseOverSong && this.hoveredIndex !== -1) {
+                this.selectedIndex = this.hoveredIndex;
+                // Return the selected song to trigger playback
+                const selectedSong = this.songLoader.getAllSongs()[this.selectedIndex];
+
+                // Handle song selection via callback if available
+                if (this.onSongSelect) {
+                    this.onSongSelect(selectedSong);
+                }
+            }
+        });
+
+        // Mouse wheel handler for scrolling
+        this.canvas.addEventListener('wheel', (event) => {
+            if (!this.isVisible || this.isAnimating) return;
+
+            event.preventDefault(); // Prevent page scrolling
+
+            const songs = this.songLoader.getAllSongs();
+            this.previousSelectedIndex = this.selectedIndex;
+
+            // Determine scroll direction
+            if (event.deltaY > 0) {
+                // Scroll down
+                this.selectedIndex = (this.selectedIndex + 1) % songs.length;
+                this.animationDirection = -1;
+            } else {
+                // Scroll up
+                this.selectedIndex = (this.selectedIndex - 1 + songs.length) % songs.length;
+                this.animationDirection = 1;
+            }
+
+            this.isAnimating = true;
+            this.animationProgress = 0;
+            this.playScrollSound();
+            this.draw();
+        }, { passive: false }); // Important for preventDefault to work
+
+    }
+
+    // Method to determine if mouse is over any song
+    checkMouseOverSongs() {
+        const visibleSongs = this.getVisibleSongs();
+        this.isMouseOverSong = false;
+        this.hoveredIndex = -1;
+
+        // Get the center X position for the song boxes
+        const boxCenterX = this.canvas.width / 2;
+        const boxLeft = boxCenterX - (this.songBoxWidth / 2);
+
+        // Check each visible song
+        visibleSongs.forEach((song, visibleIndex) => {
+            const y = this.getYPosition(visibleIndex);
+
+            // Skip if offscreen (for animation)
+            if (y < 80 || y > this.canvas.height - 150) return;
+
+            // Check if mouse is within this song's box
+            if (this.mousePosition.x >= boxLeft &&
+                this.mousePosition.x <= boxLeft + this.songBoxWidth &&
+                this.mousePosition.y >= y &&
+                this.mousePosition.y <= y + this.songBoxHeight) {
+
+                this.isMouseOverSong = true;
+                this.hoveredIndex = song.originalIndex !== undefined ? song.originalIndex : visibleIndex;
+
+                // Change cursor to pointer
+                this.canvas.style.cursor = 'pointer';
+            }
+        });
+
+        // Reset cursor if not over any song
+        if (!this.isMouseOverSong) {
+            this.canvas.style.cursor = 'default';
+        }
+    }
+
+    scrollToSong(targetIndex) {
+        // Calculate how many steps we need to animate
+        const songs = this.songLoader.getAllSongs();
+        const currentIndex = this.selectedIndex;
+
+        // Find shortest path (may need to wrap around)
+        let steps = targetIndex - currentIndex;
+        if (Math.abs(steps) > songs.length / 2) {
+            // Shorter to go the other way around
+            steps = steps > 0 ? steps - songs.length : steps + songs.length;
+        }
+
+        // We'll use this for animation direction
+        this.animationDirection = steps > 0 ? -1 : 1;
+
+        // For large jumps, we might want a faster animation or multiple steps
+        this.animationSpeed = Math.min(1, 0.2 + (Math.abs(steps) * 0.15));
+
+        this.isAnimating = true;
+        this.animationProgress = 0;
+        this.draw();
     }
 
     show() {
@@ -150,11 +295,20 @@ class SongSelectUI {
             // Skip if offscreen (for animation)
             if (y < 80 || y > this.canvas.height - 150) return;
 
+            // Check if selected or hovered
             const isSelected = originalIndex === this.selectedIndex;
-            const record = this.songRecords.get(song.id);
+            const isHovered = originalIndex === this.hoveredIndex && this.isMouseOverSong;
 
-            // Draw box background with a highlight for selected item
-            this.ctx.fillStyle = isSelected ? '#444' : '#222';
+            // Determine box color based on state
+            if (isSelected) {
+                this.ctx.fillStyle = '#444'; // Selected color
+            } else if (isHovered) {
+                this.ctx.fillStyle = '#333'; // Hover color
+            } else {
+                this.ctx.fillStyle = '#222'; // Normal color
+            }
+
+            // Draw box background
             this.ctx.fillRect(
                 (this.canvas.width - this.songBoxWidth) / 2,
                 y,
@@ -162,12 +316,14 @@ class SongSelectUI {
                 this.songBoxHeight
             );
 
+            // Rest of the drawing code remains the same...
             // Set up text positions
             const boxCenterX = this.canvas.width / 2;
             const boxLeft = boxCenterX - (this.songBoxWidth / 2);
             const boxRight = boxCenterX + (this.songBoxWidth / 2);
 
             // Draw FC marker on left if achieved
+            const record = this.songRecords.get(song.id);
             this.ctx.font = '40px nunito';
             this.ctx.textAlign = 'left';
             if (record?.isFullCombo) {
@@ -203,16 +359,16 @@ class SongSelectUI {
             this.drawScrollIndicators();
         }
 
-        // Draw instructions
+        // Draw instructions (now with simplified mouse instructions)
         this.ctx.font = '20px nunito';
         this.ctx.fillStyle = 'white';
         this.ctx.textAlign = 'center';
         const instructions = [
             '↑↓ to select, ENTER to play, F2 for debug mode',
-            'Controls: S D | J K',
+            'Click song to play, scroll wheel to browse',
+            'Controls: S D | K L',
             'Hold R for 1 second to restart song',
             'IT IS HIGHLY RECOMMEND TO PLAY ON FULLSCREEN',
-            'As this gives you best hit detection',
         ];
 
         instructions.forEach((text, index) => {
@@ -271,10 +427,46 @@ class SongSelectUI {
                 break;
 
             case 'Enter':
-                return songs[this.selectedIndex];
+                // Return the selected song
+                const selectedSong = songs[this.selectedIndex];
+
+                // Handle song selection via callback if available
+                if (this.onSongSelect) {
+                    this.onSongSelect(selectedSong);
+                    return null;
+                }
+
+                return selectedSong;
         }
 
         return null;
+    }
+
+    handleMouseClick() {
+        if (this.isAnimating) return;
+
+        // If mouse is over a song and it's not already selected, select it
+        if (this.isMouseOverSong && this.hoveredIndex !== -1) {
+            if (this.hoveredIndex !== this.selectedIndex) {
+                // Store previous index for animation
+                this.previousSelectedIndex = this.selectedIndex;
+                this.selectedIndex = this.hoveredIndex;
+
+                // Use the smooth scroll function for better transitions
+                this.scrollToSong(this.hoveredIndex);
+                this.playScrollSound();
+            } else {
+                // If clicking already selected song, return as if Enter was pressed
+                this.onSongSelected();
+            }
+        }
+    }
+
+
+    // Method to be called when a song is selected (clicked or Enter pressed)
+    onSongSelected() {
+        const songs = this.songLoader.getAllSongs();
+        return songs[this.selectedIndex];
     }
 
     getVisibleSongs() {
