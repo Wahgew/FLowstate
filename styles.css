@@ -1,0 +1,314 @@
+/* Main layout styles */
+body {
+    margin: 0;
+    padding: 0;
+    background: #000000;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Nunito', sans-serif;
+}
+
+#gameContainer {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: center;
+    border: none;
+}
+
+#gameWorld {
+    width: 100%;
+    height: 100%;
+    background: black;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    outline: none;
+}
+
+/* Button styles */
+#fullscreenButton, #resetScoresButton {
+    position: absolute;
+    right: 10px;
+    padding: 8px 12px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    border-radius: 4px;
+    z-index: 2;
+}
+
+#fullscreenButton {
+    top: 10px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#resetScoresButton {
+    top: 50px;
+    background: rgba(255, 0, 0, 0.2);
+}
+
+#fullscreenButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#resetScoresButton:hover {
+    background: rgba(255, 0, 0, 0.3);
+}
+
+/* Help button moved to bottom left */
+.help-button {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.help-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Confirmation dialog */
+.confirmation-dialog {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: center;
+    z-index: 3;
+    display: none;
+}
+
+.confirmation-dialog p {
+    color: white;
+    margin-bottom: 20px;
+    font-family: 'Nunito', sans-serif;
+}
+
+.confirmation-dialog button {
+    margin: 0 10px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+}
+
+.confirm-yes {
+    background: #ff4444;
+    color: white;
+}
+
+.confirm-no {
+    background: #666;
+    color: white;
+}
+
+/* Volume controls */
+.volume-controls {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 2;
+    width: 200px;
+}
+
+.volume-group {
+    margin-bottom: 15px;
+}
+
+.volume-group:last-child {
+    margin-bottom: 0;
+}
+
+.volume-label {
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.volume-value {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+}
+
+.volume-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    transition: background 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+.volume-slider::-webkit-slider-thumb:active {
+    transform: scale(0.95);
+}
+
+.volume-slider::-moz-range-thumb:active {
+    transform: scale(0.95);
+}
+
+/* Help panel styling */
+.help-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 20;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    overflow-y: auto;
+}
+
+.help-content {
+    width: 80%;
+    max-width: 800px;
+    max-height: 90vh;
+    background: #111;
+    border-radius: 8px;
+    padding: 20px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    overflow-y: auto;
+    position: relative;
+}
+
+.help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.help-header h1 {
+    margin: 0;
+    font-size: 28px;
+    color: white;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.help-section {
+    margin-bottom: 30px;
+}
+
+.help-section h2 {
+    color: #ff9b9b;
+    margin-top: 0;
+    font-size: 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+
+.difficulty-guide {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.difficulty-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.diff-stars {
+    font-size: 20px;
+    min-width: 100px;
+}
+
+.diff-label {
+    font-weight: bold;
+    min-width: 80px;
+}
+
+.diff-desc {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Scrollbar styling */
+.help-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.help-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.help-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.help-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

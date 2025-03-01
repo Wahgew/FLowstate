@@ -11,10 +11,10 @@ class SongSelectUI {
         // Basic UI constants
         this.songBoxWidth = 550;
         this.songBoxHeight = 80;
-        this.spacing = 20;
+        this.spacing = 15;
 
         // New properties for circular scrolling
-        this.visibleSongsCount = 8; // Number of songs visible at once
+        this.visibleSongsCount = 9;
         this.isAnimating = false;
         this.animationProgress = 0;
         this.animationDirection = 0; // 1 for down, -1 for up
@@ -26,14 +26,14 @@ class SongSelectUI {
         this.hoveredIndex = -1; // Song index being hovered
         this.isMouseOverSong = false;
 
-        // Set up mouse event listeners
-        this.setupMouseListeners();
-
         // Animation frame request ID
         this.animationFrameId = null;
 
         // Load all song records when initializing
         this.loadSongRecords();
+
+        // Set up mouse event listeners
+        this.setupMouseListeners();
     }
 
     async loadSongRecords() {
@@ -293,7 +293,7 @@ class SongSelectUI {
             const y = this.getYPosition(visibleIndex);
 
             // Skip if offscreen (for animation)
-            if (y < 80 || y > this.canvas.height - 150) return;
+            if (y < 80 || y > this.canvas.height - 30) return;
 
             // Check if selected or hovered
             const isSelected = originalIndex === this.selectedIndex;
@@ -316,7 +316,6 @@ class SongSelectUI {
                 this.songBoxHeight
             );
 
-            // Rest of the drawing code remains the same...
             // Set up text positions
             const boxCenterX = this.canvas.width / 2;
             const boxLeft = boxCenterX - (this.songBoxWidth / 2);
@@ -359,24 +358,11 @@ class SongSelectUI {
             this.drawScrollIndicators();
         }
 
-        // Draw instructions (now with simplified mouse instructions)
-        this.ctx.font = '20px nunito';
-        this.ctx.fillStyle = 'white';
+        // Just one simple instruction at the bottom
+        this.ctx.font = '16px nunito';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         this.ctx.textAlign = 'center';
-        const instructions = [
-            '↑↓ to select, ENTER to play, F2 for debug mode',
-            'Click song to play, scroll wheel to browse',
-            'Controls: S D | K L',
-            'Hold R for 1 second to restart song',
-            'IT IS HIGHLY RECOMMEND TO PLAY ON FULLSCREEN',
-        ];
-
-        instructions.forEach((text, index) => {
-            this.ctx.fillText(text,
-                this.canvas.width / 2,
-                this.canvas.height - (105 - index * 25)
-            );
-        });
+        this.ctx.fillText('Click song to play or press ENTER', this.canvas.width / 2, this.canvas.height - 15);
     }
 
     drawScrollIndicators() {
@@ -534,7 +520,7 @@ class SongSelectUI {
     }
 
     getYPosition(index, offset = 0) {
-        const startY = 120;
+        const startY = 100; // Slightly higher start position
         let position = startY + (index * (this.songBoxHeight + this.spacing));
 
         // Apply animation offset if animating

@@ -3,187 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Flowstate</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000000;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #gameContainer {
-            position: relative;
-            width: 1920px;
-            height: 1080px;
-            transform-origin: center;
-            border: none;
-        }
-
-        #gameWorld {
-            width: 100%;
-            height: 100%;
-            background: black;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            outline: none;
-        }
-
-        #fullscreenButton, #resetScoresButton {
-            position: absolute;
-            right: 10px;
-            padding: 8px 12px;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-family: 'Nunito', sans-serif;
-            border-radius: 4px;
-            z-index: 2;
-        }
-
-        #fullscreenButton {
-            top: 10px;
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        #resetScoresButton {
-            top: 50px;
-            background: rgba(255, 0, 0, 0.2);
-        }
-
-        #fullscreenButton:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        #resetScoresButton:hover {
-            background: rgba(255, 0, 0, 0.3);
-        }
-
-        .confirmation-dialog {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-align: center;
-            z-index: 3;
-            display: none;
-        }
-
-        .confirmation-dialog p {
-            color: white;
-            margin-bottom: 20px;
-            font-family: 'Nunito', sans-serif;
-        }
-
-        .confirmation-dialog button {
-            margin: 0 10px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Nunito', sans-serif;
-        }
-
-        .confirm-yes {
-            background: #ff4444;
-            color: white;
-        }
-
-        .confirm-no {
-            background: #666;
-            color: white;
-        }
-
-        .volume-controls {
-            position: absolute;
-            left: 10px;
-            top: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 2;
-            width: 200px;
-        }
-
-        .volume-group {
-            margin-bottom: 15px;
-        }
-
-        .volume-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .volume-label {
-            color: white;
-            font-family: 'Nunito', sans-serif;
-            font-size: 14px;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .volume-value {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 12px;
-        }
-
-        .volume-slider {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 4px;
-            border-radius: 2px;
-            background: rgba(255, 255, 255, 0.1);
-            outline: none;
-            transition: background 0.2s;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .volume-slider::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        .volume-slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            border: none;
-            transition: transform 0.1s;
-        }
-
-        .volume-slider::-moz-range-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        /* Active slider styling */
-        .volume-slider::-webkit-slider-thumb:active {
-            transform: scale(0.95);
-        }
-
-        .volume-slider::-moz-range-thumb:active {
-            transform: scale(0.95);
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
@@ -234,6 +54,7 @@
 
     <button id="fullscreenButton">Zen Mode (F11)</button>
     <button id="resetScoresButton">Reset All Scores</button>
+    <button id="helpButton" class="help-button">Help</button>
 
     <!-- Confirmation dialog -->
     <div id="confirmationDialog" class="confirmation-dialog">
@@ -241,8 +62,100 @@
         <button class="confirm-yes" id="confirmYes">Yes, Reset All</button>
         <button class="confirm-no" id="confirmNo">Cancel</button>
     </div>
+
+    <!-- Help Panel -->
+    <div id="helpPanel" class="help-panel">
+        <div class="help-content">
+            <div class="help-header">
+                <h1>Flowstate - How to Play</h1>
+                <button id="closeHelpButton" class="close-button">×</button>
+            </div>
+
+            <div class="help-section">
+                <h2>Getting Started</h2>
+                <p>Welcome to Flowstate, a rhythm game inspired by Osu! Mania Where you hit notes in time with the music.</p>
+                <p><strong>It is highly recommended to play in fullscreen mode (F11)</strong> for the best hit detection and gameplay experience.</p>
+            </div>
+
+            <div class="help-section">
+                <h2>Song Selection</h2>
+                <p><strong>Keyboard:</strong> Use ↑/↓ arrows to navigate songs and ENTER to play selected song.</p>
+                <p><strong>Mouse:</strong> Click on any song to play it immediately or use mouse wheel to scroll.</p>
+                <p><strong>Debug Mode:</strong> Press F2 before starting a song to enable auto-play.</p>
+            </div>
+
+            <div class="help-section">
+                <h2>Gameplay Controls</h2>
+                <p><strong>Hit notes:</strong> Press the keys S, D, K, and L as notes reach the hit circles.</p>
+                <p><strong>Restart:</strong> Hold R for 1 second during gameplay to restart the current song.</p>
+                <p><strong>Return to menu:</strong> Press ENTER on the results screen to return to song selection.</p>
+            </div>
+
+            <div class="help-section">
+                <h2>Difficulty Ratings</h2>
+                <div class="difficulty-guide">
+                    <div class="difficulty-item">
+                        <span class="diff-stars" style="color: #00cc00;">★☆☆☆☆</span>
+                        <span class="diff-label">Easy</span>
+                        <span class="diff-desc">Perfect for beginners</span>
+                    </div>
+                    <div class="difficulty-item">
+                        <span class="diff-stars" style="color: #ffcc00;">★★☆☆☆</span>
+                        <span class="diff-label">Normal</span>
+                        <span class="diff-desc">Basic rhythm patterns</span>
+                    </div>
+                    <div class="difficulty-item">
+                        <span class="diff-stars" style="color: #ff6600;">★★★☆☆</span>
+                        <span class="diff-label">Normal+</span>
+                        <span class="diff-desc">More complex patterns</span>
+                    </div>
+                    <div class="difficulty-item">
+                        <span class="diff-stars" style="color: #ff44aa;">★★★★☆</span>
+                        <span class="diff-label">Hard</span>
+                        <span class="diff-desc">Fast streams and jumps</span>
+                    </div>
+                    <div class="difficulty-item">
+                        <span class="diff-stars" style="color: #ff0000;">★★★★★</span>
+                        <span class="diff-label">Expert</span>
+                        <span class="diff-desc">Intense patterns for rhythm masters</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h2>Scoring</h2>
+                <p><strong>Perfect:</strong> 300 points - Hit with perfect timing</p>
+                <p><strong>Good:</strong> 150 points - Hit with good timing</p>
+                <p><strong>Bad:</strong> 50 points - Hit with poor timing</p>
+                <p><strong>Miss:</strong> 0 points - Completely missed the note</p>
+                <p>Your combo multiplies as you hit consecutive notes without missing!</p>
+            </div>
+
+            <div class="help-section">
+                <h2>Grades</h2>
+                <p><strong>SS:</strong> 100% accuracy with Full Combo</p>
+                <p><strong>S:</strong> 95%+ accuracy</p>
+                <p><strong>A:</strong> 85%+ accuracy</p>
+                <p><strong>B:</strong> 70%+ accuracy</p>
+                <p><strong>C:</strong> 60%+ accuracy</p>
+                <p><strong>D:</strong> 50%+ accuracy</p>
+                <p><strong>F:</strong> Below 50% accuracy</p>
+            </div>
+
+            <div class="help-section">
+                <h2>Volume Controls</h2>
+                <p>Adjust volume settings using the sliders in the top-left corner:</p>
+                <ul>
+                    <li><strong>Music Volume:</strong> Controls the song volume</li>
+                    <li><strong>Hit Sound Volume:</strong> Controls the note hit sound effects</li>
+                    <li><strong>Miss Sound Volume:</strong> Controls the volume of miss sounds</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- Game Scripts -->
 <script type="text/javascript" src="OsuParse.js"></script>
 <script type="text/javascript" src="PlayerDataManager.js"></script>
 <script type="text/javascript" src="SongLoader.js"></script>
@@ -250,179 +163,6 @@
 <script type="text/javascript" src="EndScreenUI.js"></script>
 <script type="text/javascript" src="GameManager.js"></script>
 <script type="text/javascript" src="Main.js"></script>
-<script>
-    // Resolution handling
-    function resizeGame() {
-        const gameContainer = document.getElementById('gameContainer');
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const gameAspectRatio = 1920 / 1080;
-        const windowAspectRatio = windowWidth / windowHeight;
-
-        let scale;
-        if (windowAspectRatio > gameAspectRatio) {
-            scale = (windowHeight / 1080) * 0.95;
-        } else {
-            scale = (windowWidth / 1920) * 0.95;
-        }
-
-        gameContainer.style.transform = `scale(${scale})`;
-    }
-
-    // Fullscreen handling
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.log(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
-    // Event listeners for fullscreen
-    window.addEventListener('resize', resizeGame);
-    document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F11') {
-            e.preventDefault();
-            toggleFullscreen();
-        }
-    });
-
-    // Reset scores functionality
-    const resetScoresButton = document.getElementById('resetScoresButton');
-    const confirmationDialog = document.getElementById('confirmationDialog');
-    const confirmYes = document.getElementById('confirmYes');
-    const confirmNo = document.getElementById('confirmNo');
-
-    resetScoresButton.addEventListener('click', () => {
-        confirmationDialog.style.display = 'block';
-    });
-
-    confirmYes.addEventListener('click', async () => {
-        if (window.playerDataManager) {
-            await window.playerDataManager.clearAllRecords();
-            // Refresh the song selection UI if it's visible
-            if (window.gameManager && window.gameManager.onSongSelect) {
-                window.gameManager.onSongSelect();
-            }
-        }
-        confirmationDialog.style.display = 'none';
-    });
-
-    confirmNo.addEventListener('click', () => {
-        confirmationDialog.style.display = 'none';
-    });
-
-    // Close dialog if clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === confirmationDialog) {
-            confirmationDialog.style.display = 'none';
-        }
-    });
-
-    // Initial resize
-    resizeGame();
-</script>
-<script>
-    // Volume control functionality
-    const songVolumeSlider = document.getElementById('songVolumeSlider');
-    const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
-    const missSoundVolumeSlider = document.getElementById('missSoundVolumeSlider');
-
-    const songVolumeValue = document.getElementById('songVolumeValue');
-    const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
-    const missSoundVolumeValue = document.getElementById('missSoundVolumeValue');
-
-    // Fixed updateVolumes function to prevent recursion
-    function updateVolumes() {
-        // Check if the function is already being called from Main.js
-        if (window._updatingVolumesFromMain) {
-            return; // Prevent recursive calls
-        }
-
-        // Set flag to prevent recursion
-        window._updatingVolumesFromIndex = true;
-
-        try {
-            if (window.volumeState) {
-                // Update global state
-                window.volumeState.songVolume = songVolumeSlider.value / 100;
-                window.volumeState.hitSoundVolume = hitSoundVolumeSlider.value / 100;
-                window.volumeState.missSoundVolume = missSoundVolumeSlider.value / 100;
-
-                // Update display values
-                songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-                hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
-                missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
-
-                // Update game manager if it exists
-                if (window.gameManager) {
-                    window.gameManager.setSongVolume(window.volumeState.songVolume);
-                    window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
-                }
-
-                // If updateVolumes in Main.js exists and we're not in a recursion state, call it
-                if (window.updateVolumes && !window._updatingVolumesFromMain) {
-                    window._updatingVolumesFromIndex = false; // Clear flag before calling
-                    window.updateVolumes();
-                }
-            }
-        } finally {
-            // Clear flag
-            window._updatingVolumesFromIndex = false;
-        }
-    }
-
-    // Add event listeners for all volume sliders
-    songVolumeSlider.addEventListener('input', updateVolumes);
-    hitSoundVolumeSlider.addEventListener('input', updateVolumes);
-    missSoundVolumeSlider.addEventListener('input', updateVolumes);
-
-    // Store volume preferences in localStorage
-    function saveVolumePreferences() {
-        if (window.playerDataManager) {
-            // If PlayerDataManager is available, save using that
-            window.playerDataManager.saveVolumeSettings(window.volumeState);
-        } else {
-            // Otherwise, save to localStorage as fallback
-            localStorage.setItem('songVolume', songVolumeSlider.value);
-            localStorage.setItem('hitSoundVolume', hitSoundVolumeSlider.value);
-            localStorage.setItem('missSoundVolume', missSoundVolumeSlider.value);
-        }
-    }
-
-    // Load volume preferences
-    function loadVolumePreferences() {
-        // Try to get values from localStorage
-        const savedSongVolume = localStorage.getItem('songVolume');
-        const savedHitSoundVolume = localStorage.getItem('hitSoundVolume');
-        const savedMissSoundVolume = localStorage.getItem('missSoundVolume');
-
-        if (savedSongVolume !== null) {
-            songVolumeSlider.value = savedSongVolume;
-        }
-        if (savedHitSoundVolume !== null) {
-            hitSoundVolumeSlider.value = savedHitSoundVolume;
-        }
-        if (savedMissSoundVolume !== null) {
-            missSoundVolumeSlider.value = savedMissSoundVolume;
-        }
-
-        // Update the volume values in UI
-        songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-        hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
-        missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
-    }
-
-    // Save volumes when changed
-    songVolumeSlider.addEventListener('change', saveVolumePreferences);
-    hitSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
-    missSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
-
-    // Load saved volumes when page loads
-    window.addEventListener('load', loadVolumePreferences);
-</script>
+<script type="text/javascript" src="GameControls.js"></script>
 </body>
 </html>
