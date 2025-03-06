@@ -51,6 +51,11 @@ class GameManager {
         this.noteCount = 0;
         this.gameTimer = 0;
 
+        // Track keys currently being held down
+        this.heldKeys = new Set();
+        // Track active hold notes
+        this.activeHoldNotes = new Map(); // key -> note mapping
+
         // timing lines
         this.timingLines = [];
         this.timingLineSpacing = 2.0 // line spacing occurrence
@@ -198,7 +203,7 @@ class GameManager {
             laneData.notes.forEach(note => {
                 const spawnTime = (note.hitTime * 1000) - this.approachDuration;
                 const timer = setTimeout(() => {
-                    this.spawnNote(lane, note.hitTime);
+                    this.spawnNote(lane, note.hitTime, note);
                     this.noteCount++;
                 }, Math.max(0, spawnTime));
                 this.noteSpawnTimers.push(timer);
@@ -282,6 +287,14 @@ class GameManager {
                 return;
             }
 
+            const pressedLane = this.lanes.find(lane => lane.key === event.key);
+            if (pressedLane && !this.pressedKeys.has(event.key)) {
+                this.pressedKeys.add(event.key);
+                this.heldKeys.add(event.key); // Track key as being held
+                this.playHitSound(event.key);
+                this.handleNoteHit(pressedLane);
+            }
+
             // Only process gameplay keys if not in auto-play
             if (!this.autoPlay) {
                 const pressedLane = this.lanes.find(lane => lane.key === event.key);
@@ -306,6 +319,17 @@ class GameManager {
             const pressedLane = this.lanes.find(lane => lane.key === event.key);
             if (pressedLane) {
                 this.pressedKeys.delete(event.key);
+            }
+
+            const releasedLane = this.lanes.find(lane => lane.key === event.key);
+            if (releasedLane) {
+                this.heldKeys.delete(event.key); // Remove from held keys
+                this.pressedKeys.delete(event.key);
+
+                // Handle hold note release if there's an active hold note
+                if (this.activeHoldNotes.has(event.key)) {
+                    this.handleHoldNoteRelease(releasedLane, event.key);
+                }
             }
 
             // R key release handling - check hold duration
@@ -438,7 +462,7 @@ class GameManager {
         let closestTimeDiff = Infinity;
         let closestIndex = -1;
 
-        // Find closest note logic...
+        // Find closest note logic (existing code)
         lane.notes.forEach((note, index) => {
             const timeDiff = Math.abs(currentTime - note.targetTime);
             if (timeDiff < closestTimeDiff) {
@@ -451,28 +475,93 @@ class GameManager {
         const timeDiffMs = closestTimeDiff * 1000;
 
         if (closestNote && timeDiffMs <= this.timingWindows.bad) {
-            if (timeDiffMs <= this.timingWindows.perfect) {
-                this.showHitText(lane, 'PERFECT', '#00ff00');
-                this.score += 300;
-                this.currentCombo++;
-                this.stats.perfectCount++;
-            } else if (timeDiffMs <= this.timingWindows.good) {
-                this.showHitText(lane, 'GOOD', '#ffff00');
-                this.score += 150;
-                this.currentCombo++;
-                this.stats.goodCount++;
+            // If it's a hold note, handle it differently
+            if (closestNote.isHold) {
+                if (timeDiffMs <= this.timingWindows.perfect) {
+                    this.showHitText(lane, 'PERFECT', '#00ff00');
+                    this.score += 300; // Initial points for hitting the start perfectly
+                    this.currentCombo++;
+                    this.stats.perfectCount++;
+
+                    // Track this hold note as active
+                    this.activeHoldNotes.set(lane.key, {
+                        note: closestNote,
+                        startScore: 300,
+                        laneIndex: this.lanes.indexOf(lane),
+                        noteIndex: closestIndex
+                    });
+                } else if (timeDiffMs <= this.timingWindows.good) {
+                    this.showHitText(lane, 'GOOD', '#ffff00');
+                    this.score += 150;
+                    this.currentCombo++;
+                    this.stats.goodCount++;
+
+                    // Track this hold note as active
+                    this.activeHoldNotes.set(lane.key, {
+                        note: closestNote,
+                        startScore: 150,
+                        laneIndex: this.lanes.indexOf(lane),
+                        noteIndex: closestIndex
+                    });
+                } else {
+                    this.showHitText(lane, 'BAD', '#ff6666');
+                    this.score += 50;
+                    this.currentCombo++;
+                    this.stats.badCount++;
+
+                    // Track this hold note as active
+                    this.activeHoldNotes.set(lane.key, {
+                        note: closestNote,
+                        startScore: 50,
+                        laneIndex: this.lanes.indexOf(lane),
+                        noteIndex: closestIndex
+                    });
+                }
             } else {
-                this.showHitText(lane, 'BAD', '#ff6666');
-                this.score += 50;
-                this.currentCombo++;
-                this.stats.badCount++;
+                // Regular note handling (existing code)
+                if (timeDiffMs <= this.timingWindows.perfect) {
+                    this.showHitText(lane, 'PERFECT', '#00ff00');
+                    this.score += 300;
+                    this.currentCombo++;
+                    this.stats.perfectCount++;
+                } else if (timeDiffMs <= this.timingWindows.good) {
+                    this.showHitText(lane, 'GOOD', '#ffff00');
+                    this.score += 150;
+                    this.currentCombo++;
+                    this.stats.goodCount++;
+                } else {
+                    this.showHitText(lane, 'BAD', '#ff6666');
+                    this.score += 50;
+                    this.currentCombo++;
+                    this.stats.badCount++;
+                }
+
+                // Remove the hit note (only for regular notes)
+                lane.notes.splice(closestIndex, 1);
             }
 
             // Update max combo
             this.stats.maxCombo = Math.max(this.stats.maxCombo, this.currentCombo);
+        }
+    }
 
-            // Remove the hit note
-            lane.notes.splice(closestIndex, 1);
+    handleHoldNoteRelease(lane, key) {
+        const holdInfo = this.activeHoldNotes.get(key);
+        if (!holdInfo) return;
+
+        const currentTime = (performance.now() - this.startTime) / 1000;
+        const note = holdInfo.note;
+
+        // Remove the active hold note
+        this.activeHoldNotes.delete(key);
+
+        // Remove the hold note from the lane
+        const targetLane = this.lanes[holdInfo.laneIndex];
+        if (targetLane) {
+            const noteIndex = targetLane.notes.findIndex(n => n === note);
+            if (noteIndex !== -1) {
+                targetLane.notes.splice(noteIndex, 1);
+            }
         }
     }
 
@@ -625,6 +714,17 @@ class GameManager {
 
     // Modified drawNotes method to ensure proper note size
     drawNotes() {
+        // Count notes of each type for debugging - MOVED THIS OUTSIDE THE LOOP
+        let regularCount = 0;
+        let holdCount = 0;
+
+        this.lanes.forEach(lane => {
+            regularCount += lane.notes.filter(note => !note.isHold).length;
+            holdCount += lane.notes.filter(note => note.isHold).length;
+        });
+
+        console.log(`Drawing notes: ${regularCount} regular, ${holdCount} hold notes`);
+
         this.ctx.fillStyle = 'white';
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
 
@@ -632,19 +732,95 @@ class GameManager {
             lane.notes.forEach(note => {
                 const centerX = lane.x + (this.laneWidth / 2);
 
-                // Draw note circle
-                this.ctx.beginPath();
-                this.ctx.arc(centerX, note.position.y, this.noteRadius, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.stroke();
+                if (note.isHold) {
+                    // Current time to calculate the end position of hold note
+                    const currentTime = (performance.now() - this.startTime) / 1000;
 
-                // Draw debug info for each note if in debug mode
+                    // For hold notes, we need to draw a rectangle from the start to the end
+                    // Calculate end position based on currentTime and endTime
+                    let endY = note.position.y;
+
+                    // If current time is before end time, calculate the visible length
+                    if (note.endTime && currentTime < note.endTime) {
+                        // Calculate how much time is left in the hold
+                        const timeLeft = note.endTime - currentTime;
+
+                        // Calculate the distance this time represents
+                        const distanceLeft = timeLeft * (this.noteSpeed * this.targetFPS);
+
+                        // Calculate end Y position
+                        // For hold notes coming down, the end position should be ABOVE the current position
+                        endY = Math.max(this.spawnY, note.position.y - distanceLeft);
+                    }
+
+                    // Draw the hold note as a rectangle
+                    const holdHeight = Math.abs(note.position.y - endY);
+
+                    // Draw hold body (only if there's height to draw)
+                    if (holdHeight > 0) {
+                        // Constants for drawing
+                        const holdWidth = this.noteRadius * 2; // Width same as circle diameter
+
+                        // Draw hold body as a rounded rectangle with consistent width
+                        this.ctx.fillStyle = 'rgb(211,211,211)'; // gray with transparency
+
+                        // Draw main rectangle body
+                        this.ctx.beginPath();
+                        this.ctx.roundRect(
+                            centerX - this.noteRadius,
+                            endY,
+                            holdWidth,
+                            holdHeight,
+                            [this.noteRadius, this.noteRadius, 0, 0] // Round only the top corners
+                        );
+                        this.ctx.fill();
+
+                        // Draw start circle (the one that stays at the hit line)
+                        this.ctx.fillStyle = 'rgb(133, 190, 242)'; // Solid blue
+                        this.ctx.beginPath();
+                        this.ctx.arc(centerX, note.position.y, this.noteRadius, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                        this.ctx.stroke();
+
+                        // Draw end circle if the trail is long enough
+                        if (holdHeight > this.noteRadius) {
+                            this.ctx.fillStyle = 'rgba(133, 190, 242, 0.9)';
+                            this.ctx.beginPath();
+                            this.ctx.arc(centerX, endY, this.noteRadius, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            this.ctx.stroke();
+                        }
+                    } else {
+                        // If no height (end time passed), just draw as regular note
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.beginPath();
+                        this.ctx.arc(centerX, note.position.y, this.noteRadius, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.stroke();
+                    }
+                } else {
+                    // Regular note drawing
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX, note.position.y, this.noteRadius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+                }
+
+                // Debug info
                 if (this.debugMode) {
                     const currentTime = (performance.now() - this.startTime) / 1000;
                     const timeToHit = (note.targetTime - currentTime) * 1000;
                     this.ctx.fillStyle = 'gray';
                     this.ctx.font = '10px nunito';
                     this.ctx.fillText(`${timeToHit.toFixed(0)}ms`, centerX - 15, note.position.y);
+
+                    // Add hold note debug info
+                    if (note.isHold && note.endTime) {
+                        this.ctx.fillText(`Hold: ${((note.endTime - note.targetTime) * 1000).toFixed(0)}ms`,
+                            centerX - 20, note.position.y + 15);
+                    }
                 }
             });
         });
@@ -834,20 +1010,65 @@ class GameManager {
                 const note = lane.notes[i];
                 const timeDiff = Math.abs(currentTime - note.targetTime) * 1000;
 
-                // Only count as miss if the note is well past the hit window
-                if (currentTime > note.targetTime && timeDiff > this.timingWindows.bad) {
-                    this.showHitText(lane, 'MISS', '#ff0000');
-                    this.currentCombo = 0; // Only reset combo on complete misses
-                    this.stats.missCount++;
-                    lane.notes.splice(i, 1);
-                    this.playMissSound();
+                // For regular notes
+                if (!note.isHold) {
+                    // Only count as miss if the note is well past the hit window
+                    if (currentTime > note.targetTime && timeDiff > this.timingWindows.bad) {
+                        this.showHitText(lane, 'MISS', '#ff0000');
+                        this.currentCombo = 0; // Only reset combo on complete misses
+                        this.stats.missCount++;
+                        lane.notes.splice(i, 1);
+                        this.playMissSound();
+                    }
+                }
+                // For hold notes
+                else {
+                    // Only count as miss if the start time is past the hit window
+                    if (currentTime > note.targetTime && timeDiff > this.timingWindows.bad) {
+                        if (!this.activeHoldNotes.has(lane.key)) {
+                            // Player missed the start of the hold note
+                            this.showHitText(lane, 'MISS', '#ff0000');
+                            this.currentCombo = 0;
+                            this.stats.missCount++;
+                            lane.notes.splice(i, 1);
+                            this.playMissSound();
+                        }
+                    }
+                }
+            }
+        });
 
-                    console.log('Note missed:', {
-                        targetTime: note.targetTime,
-                        currentTime: currentTime,
-                        timeDiff: timeDiff,
-                        lane: lane.key
-                    });
+        // Check active hold notes
+        this.activeHoldNotes.forEach((holdInfo, key) => {
+            const note = holdInfo.note;
+
+            // If player released key too early (before end time)
+            if (!this.heldKeys.has(key) && currentTime < note.endTime) {
+                // Player released too early - handle as needed
+                // For your game, we don't penalize early release
+                this.activeHoldNotes.delete(key);
+
+                // Remove the hold note from the lane
+                const lane = this.lanes[holdInfo.laneIndex];
+                if (lane) {
+                    const noteIndex = lane.notes.findIndex(n => n === note);
+                    if (noteIndex !== -1) {
+                        lane.notes.splice(noteIndex, 1);
+                    }
+                }
+            }
+            // If the hold note ended naturally
+            else if (currentTime >= note.endTime) {
+                // Hold completed successfully
+                this.activeHoldNotes.delete(key);
+
+                // Remove the hold note from the lane
+                const lane = this.lanes[holdInfo.laneIndex];
+                if (lane) {
+                    const noteIndex = lane.notes.findIndex(n => n === note);
+                    if (noteIndex !== -1) {
+                        lane.notes.splice(noteIndex, 1);
+                    }
                 }
             }
         });
@@ -918,8 +1139,13 @@ class GameManager {
         return this.spawnY + (this.distanceToHitLine * (1 - progress));
     }
 
-    spawnNote(lane, hitTime) {
+    // In the spawnNote method
+    spawnNote(lane, hitTime, noteInfo = null) {
         const spawnY = this.calculateSpawnY(hitTime);
+
+        // Get the note info from lane
+        const isHold = noteInfo ? noteInfo.isHold : false;
+        const endTime = noteInfo ? noteInfo.endTime : null;
 
         const note = {
             position: {
@@ -927,10 +1153,23 @@ class GameManager {
                 y: spawnY
             },
             targetTime: hitTime,
-            spawnTime: performance.now()
+            spawnTime: performance.now(),
+            isHold: isHold
         };
 
+        // If it's a hold note, add endTime property
+        if (isHold && endTime) {
+            note.endTime = endTime;
+            console.log('Spawning hold note:', {
+                lane: lane.key,
+                targetTime: hitTime,
+                endTime: endTime,
+                duration: (endTime - hitTime) + 's'
+            });
+        }
+
         console.log(`Spawning note# ${this.noteCount} for hit time ${hitTime}ms:`, {
+            isHold: isHold,
             spawnY,
             speed: this.noteSpeed,
             timeToHit: hitTime * 1000 - (performance.now() - this.startTime)

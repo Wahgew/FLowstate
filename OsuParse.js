@@ -67,14 +67,46 @@ class OsuParser {
         };
     }
 
+    // In parseHitObject method in OsuParser.js
     parseHitObject(line) {
-        const [x, y, time, type] = line.split(',');
-        return {
-            x: parseInt(x),
-            y: parseInt(y),
-            time: parseInt(time),
-            type: parseInt(type)
-        };
+        const parts = line.split(',');
+        const [x, y, time] = parts.map(part => parseInt(part));
+        const type = parseInt(parts[3]);
+
+        console.log('Parsing hit object:', {
+            x, y, time, type,
+            line: line,
+            isHold: (type === 128)
+        });
+
+        // Check if it's a hold note (type 128)
+        if (type === 128) {
+            // Extract end time from the format: endTime:hitSample
+            const endTimeInfo = parts[5].split(':');
+            const endTime = parseInt(endTimeInfo[0]);
+
+            console.log('Found hold note:', {
+                time: time,
+                endTime: endTime,
+                duration: (endTime - time) / 1000 + 's'
+            });
+
+            return {
+                x: x,
+                y: y,
+                time: time,
+                type: type,
+                endTime: endTime,
+                isHold: true
+            };
+        } else {
+            return {
+                x: x,
+                y: y,
+                time: time,
+                type: type
+            };
+        }
     }
 
     convertToGameFormat(osuData) {
@@ -105,15 +137,39 @@ class OsuParser {
                 const hitTimeMs = hitObject.time;
                 const spawnTimeMs = Math.max(0, hitTimeMs - travelTimeMs);
 
-                lanes[laneIndex].notes.push({
-                    delay: spawnTimeMs / 1000, // Convert to seconds for setTimeout
-                    hitTime: hitTimeMs / 1000,  // Convert to seconds for game logic
-                    speed: scrollSpeed,
-                    debugInfo: {
-                        originalTime: hitTimeMs,
-                        spawnOffset: travelTimeMs
-                    }
-                });
+                // Check if it's a hold note
+                if (hitObject.isHold) {
+                    console.log('Adding hold note to lane', laneIndex, {
+                        hitTime: hitTimeMs / 1000,
+                        endTime: hitObject.endTime / 1000,
+                        duration: (hitObject.endTime - hitObject.time) / 1000 + 's'
+                    });
+
+                    lanes[laneIndex].notes.push({
+                        delay: spawnTimeMs / 1000,
+                        hitTime: hitTimeMs / 1000,
+                        isHold: true,
+                        endTime: hitObject.endTime / 1000,
+                        holdDuration: (hitObject.endTime - hitObject.time) / 1000,
+                        speed: scrollSpeed,
+                        debugInfo: {
+                            originalTime: hitTimeMs,
+                            endTime: hitObject.endTime,
+                            spawnOffset: travelTimeMs
+                        }
+                    });
+                } else {
+                    // Regular note
+                    lanes[laneIndex].notes.push({
+                        delay: spawnTimeMs / 1000,
+                        hitTime: hitTimeMs / 1000,
+                        speed: scrollSpeed,
+                        debugInfo: {
+                            originalTime: hitTimeMs,
+                            spawnOffset: travelTimeMs
+                        }
+                    });
+                }
             }
         }
 
@@ -128,8 +184,13 @@ class OsuParser {
         };
 
         result.difficulty = this.estimateDifficulty(result);
+        console.log('Lane stats after conversion:');
+        lanes.forEach((lane, index) => {
+            const holdNotes = lane.notes.filter(note => note.isHold).length;
+            const regularNotes = lane.notes.length - holdNotes;
+            console.log(`Lane ${index}: ${lane.notes.length} total notes (${regularNotes} regular, ${holdNotes} hold)`);
+        });
         return result;
-
     }
 
     estimateDifficulty(songData) {

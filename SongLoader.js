@@ -29,6 +29,7 @@ class SongLoader {
         { id: 'hikari', title: 'Hikari', difficulty: 3.0, path: './songs/Hikari.osu'},
         { id: 'otonoke', title: 'Otonoke', difficulty: 2.0, path: './songs/Otonoke.osu'},
         { id: 'into_world', title: 'Into the World', difficulty: 2.0, path: './songs/Into_the_world.osu'},
+        { id: 'the_earth', title: 'THE EARTH', difficulty: 4.0, path: './songs/THE_EARTH.osu'},
     ];
 
     async loadAllSongs() {
