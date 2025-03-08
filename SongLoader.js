@@ -29,6 +29,25 @@ class SongLoader {
         { id: 'hikari', title: 'Hikari', difficulty: 3.0, path: './songs/Hikari.osu'},
         { id: 'otonoke', title: 'Otonoke', difficulty: 2.0, path: './songs/Otonoke.osu'},
         { id: 'into_world', title: 'Into the World', difficulty: 2.0, path: './songs/Into_the_world.osu'},
+        { id: 'interlude', title: 'Interlude', difficulty: 1.0, path: './songs/Interlude.osu'},
+        { id: 'nobiru', title: 'Nobiru Type Nandesu', difficulty: 1.0, path: './songs/Nobiru_Type_Nandesu.osu'},
+        { id: 'applause', title: 'Applause', difficulty: 2.0, path: './songs/Applause.osu'},
+        { id: 'collage', title: 'Collage', difficulty: 3.0, path: './songs/Collage.osu'},
+        { id: 'orange_file', title: 'Orange File', difficulty: 3.0, path: './songs/Orange_File.osu'},
+        { id: 'minor_piece', title: 'Minor Piece', difficulty: 1.0, path: './songs/Minor_Piece.osu'},
+        { id: 'freedom_dive', title: 'FREEDOM DiVE', difficulty: 1.0, path: './songs/FREEDOM_DiVE.osu'},
+        { id: 'introduction', title: 'Introduction', difficulty: 1.0, path: './songs/introduction.osu'},
+        { id: 'funk_infernal', title: 'FUNK INFERNAL', difficulty: 3.0, path: './songs/FUNK_INFERNAL.osu'},
+        { id: 'snuggle_song', title: 'Snugglesong', difficulty: 4.0, path: './songs/Snugglesong.osu'},
+        { id: 'among_trees', title: 'Tussle Among Trees', difficulty: 1.0, path: './songs/Tussle_Among_Trees.osu'},
+        { id: 'the_light', title: 'The Light', difficulty: 1.0, path: './songs/the_light.osu'},
+        { id: 'mizuoto_curtain', title: 'Mizuoto to Curtain', difficulty: 1.0, path: './songs/Mizuoto_to_Curtain.osu'},
+
+
+
+
+
+
     ];
 
     async loadAllSongs() {
