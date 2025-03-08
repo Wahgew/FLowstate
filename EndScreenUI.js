@@ -86,9 +86,9 @@ class EndScreenUI {
         this.animationFrame = 0;
         this.applauseHasPlayed = false; // Reset applause played flag
 
-        // Check grade and play applause if A or higher
+        // Check grade and play applause if A or higher and NOT in auto-play mode
         const grade = this.calculateGrade(parseFloat(stats.accuracy), stats.isFullCombo);
-        if (['A', 'S', 'SS'].includes(grade) && !this.applauseHasPlayed) {
+        if (['A', 'S', 'SS'].includes(grade) && !stats.autoPlayUsed && !this.applauseHasPlayed) {
             this.playApplauseSound();
             this.applauseHasPlayed = true;
         }
@@ -123,6 +123,13 @@ class EndScreenUI {
         this.ctx.fillStyle = 'white';
         this.ctx.fillText('Results', this.canvas.width / 2, 220);
 
+        // If auto-play was used, show indicator
+        if (stats.autoPlayUsed) {
+            this.ctx.font = 'bold 24px nunito';
+            this.ctx.fillStyle = '#ff9b9b'; // Soft red/pink color
+            this.ctx.fillText('Auto-Play Mode', this.canvas.width / 2, 260);
+        }
+
         // Draw stats
         this.ctx.font = '32px nunito';
         const statsY = 300;
@@ -155,6 +162,16 @@ class EndScreenUI {
             this.ctx.font = 'bold 36px nunito';
             this.ctx.fillStyle = this.getRainbowColor();
             this.ctx.fillText('★ FULL COMBO! ★', this.canvas.width / 2, distributionY + lineHeight * 4.5);
+        }
+
+        // Display auto-play score notice
+        if (stats.autoPlayUsed) {
+            this.ctx.font = '22px nunito';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctx.fillText('Scores achieved in Auto-Play mode are not saved',
+                this.canvas.width / 2,
+                this.canvas.height - 100
+            );
         }
 
         // Draw return instruction

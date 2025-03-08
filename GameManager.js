@@ -33,6 +33,17 @@ class GameManager {
         this.currentFPS = 60;
         this.accumulator = 0;
 
+        // Auto-play and debug configuration
+        this.debugMode = false;
+        this.autoPlay = false;
+        this.devModeEnabled = false; // New developer mode flag
+        this.gameStarted = false;  // Track if game has started
+
+        // Add a secret key sequence for toggling developer mode
+        this.devModeSequence = ['`','y', 'u', 'f', 'i'];
+        this.currentSequenceIndex = 0;
+        this.setupDevModeToggle();
+
         // Auto-play timing data (preloaded)
         this.allNoteTimings = [];
         this.autoPlayNextNoteIndex = 0;
@@ -435,8 +446,12 @@ class GameManager {
         console.log('Debug mode toggled:', {
             debugMode: this.debugMode,
             autoPlay: this.autoPlay,
+            devMode: this.devModeEnabled,
             gameStarted: this.gameStarted
         });
+
+        // Redraw the start menu to show updated status
+        this.drawStartMenu();
     }
 
     handleNoteHit(lane) {
@@ -742,27 +757,63 @@ class GameManager {
     }
 
     drawStartMenu() {
-        this.ctx.font = '40px nunito';
+        // Clear canvas with black background
         this.ctx.fillStyle = 'black';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        this.ctx.fillStyle = 'white';
-        this.ctx.textAlign = 'center';
 
         const startX = this.canvas.width / 2;
         const startY = this.canvas.height / 2;
 
-        // Show autoplay status in start menu
-        if (this.debugMode) {
-            this.ctx.fillText('Auto-Play Mode', startX, startY - 40);
+        // Draw song title with larger font
+        this.ctx.textAlign = 'center';
+        this.ctx.font = 'bold 48px nunito';
+        this.ctx.fillStyle = 'white';
+
+        // Show song title if available
+        if (this.songData && this.songData.title) {
+            this.ctx.fillText(this.songData.title, startX, startY - 80);
         }
 
-        this.ctx.fillText('Start', startX, startY);
+        // Draw start button with subtle glow effect
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(startX - 150, startY - 40, 300, 80, 10);
+        this.ctx.fill();
 
-        // Add instructions
-        this.ctx.font = '20px nunito';
-        this.ctx.fillText('Press F2 to toggle Auto-Play before starting', startX, startY + 40);
-        this.ctx.fillText('Press SPACE or Click to start', startX, startY + 70);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(startX - 150, startY - 40, 300, 80, 10);
+        this.ctx.stroke();
+
+        // Draw "START" text
+        this.ctx.font = 'bold 40px nunito';
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillText('START', startX, startY + 15);
+
+        // Show auto-play status if enabled
+        if (this.autoPlay) {
+            // Draw auto-play indicator
+            this.ctx.font = '24px nunito';
+            this.ctx.fillStyle = '#ff9b9b'; // Soft red/pink
+            this.ctx.fillText('Auto-Play Mode Enabled', startX, startY + 70);
+            this.ctx.font = '16px nunito';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctx.fillText('Scores in this mode will not be saved', startX, startY + 100);
+        }
+
+        // Draw F2 tip at the bottom
+        this.ctx.font = '16px nunito';
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.fillText('Press F2 to toggle Auto-Play', startX, startY + 160);
+        this.ctx.fillText('Press SPACE or Click to start', startX, startY + 190);
+
+        // Draw developer mode indicator if active
+        if (this.debugMode && this.devModeEnabled) {
+            this.ctx.font = '14px nunito';
+            this.ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'; // Green for dev mode
+            this.ctx.fillText('Developer Mode: Scores will be saved', startX, this.canvas.height - 20);
+        }
     }
 
     drawEndScreen() {
@@ -1002,8 +1053,8 @@ class GameManager {
         this.stats.accuracy = accuracy.toFixed(2);
         this.stats.isFullCombo = this.stats.maxCombo === this.stats.totalNotes;
 
-        // Save record to database if playerData is available
-        if (this.playerData && this.songId) {  // Check for songId instead of songData
+        // Only save record if not in auto-play mode or if dev mode is enabled
+        if (this.playerData && this.songId && (!this.autoPlay || (this.autoPlay && this.devModeEnabled))) {
             try {
                 await this.playerData.saveSongRecord(this.songId, {
                     score: this.score,
@@ -1013,11 +1064,15 @@ class GameManager {
                     goodCount: this.stats.goodCount,
                     badCount: this.stats.badCount,
                     missCount: this.stats.missCount,
-                    isFullCombo: this.stats.isFullCombo
+                    isFullCombo: this.stats.isFullCombo,
+                    autoPlayUsed: this.autoPlay // Add flag to indicate if auto-play was used
                 });
+                console.log('Song record saved. Auto-play:', this.autoPlay, 'Dev mode:', this.devModeEnabled);
             } catch (error) {
                 console.error('Error saving song record:', error);
             }
+        } else if (this.autoPlay && !this.devModeEnabled) {
+            console.log('Auto-play mode active and dev mode disabled - score not saved');
         }
 
         // Create stats object for end screen
@@ -1029,7 +1084,8 @@ class GameManager {
             goodCount: this.stats.goodCount,
             badCount: this.stats.badCount,
             missCount: this.stats.missCount,
-            isFullCombo: this.stats.isFullCombo
+            isFullCombo: this.stats.isFullCombo,
+            autoPlayUsed: this.autoPlay // Add flag to indicate if auto-play was used
         };
 
         // Set up a dedicated end screen input handler
@@ -1277,6 +1333,39 @@ class GameManager {
                 this.autoPlayNextNoteIndex++;
             }
         }
+    }
+
+    setupDevModeToggle() {
+        // Listen for key presses to detect the dev mode sequence
+        document.addEventListener('keypress', (e) => {
+            // Only check before game starts
+            if (this.gameStarted) return;
+
+            const key = e.key.toLowerCase();
+
+            // Check if the pressed key matches the next key in the sequence
+            if (key === this.devModeSequence[this.currentSequenceIndex]) {
+                this.currentSequenceIndex++;
+
+                // If the full sequence is entered
+                if (this.currentSequenceIndex === this.devModeSequence.length) {
+                    // Toggle dev mode
+                    this.devModeEnabled = !this.devModeEnabled;
+                    console.log('Developer mode ' + (this.devModeEnabled ? 'enabled' : 'disabled'));
+
+                    // Reset sequence index
+                    this.currentSequenceIndex = 0;
+
+                    // Redraw start menu to show dev mode status
+                    if (!this.gameStarted) {
+                        this.drawStartMenu();
+                    }
+                }
+            } else {
+                // Reset sequence if wrong key pressed
+                this.currentSequenceIndex = 0;
+            }
+        });
     }
 
     startGame() {

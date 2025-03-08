@@ -91,6 +91,7 @@ class PlayerDataManager {
                     goodCount: stats.goodCount,
                     badCount: stats.badCount,
                     missCount: stats.missCount,
+                    autoPlayUsed: stats.autoPlayUsed || false, // Store auto-play flag
                     timestamp: Date.now()
                 };
 
@@ -114,15 +115,32 @@ class PlayerDataManager {
     }
 
     shouldUpdateRecord(oldRecord, newRecord) {
-        // Update if new score is higher
-        if (newRecord.score > oldRecord.score) return true;
+        // If old record doesn't use auto-play but new one does, don't update
+        if (!oldRecord.autoPlayUsed && newRecord.autoPlayUsed) {
+            console.log('Not updating: new record uses auto-play but existing record does not');
+            return false;
+        }
+
+        // Update if new score is higher and both have same auto-play status
+        // or if old record used auto-play but new doesn't
+        if (newRecord.score > oldRecord.score &&
+            (newRecord.autoPlayUsed === oldRecord.autoPlayUsed ||
+                (oldRecord.autoPlayUsed && !newRecord.autoPlayUsed))) {
+            return true;
+        }
 
         // Update if accuracy is better with same score
         if (newRecord.score === oldRecord.score &&
-            parseFloat(newRecord.accuracy) > parseFloat(oldRecord.accuracy)) return true;
+            parseFloat(newRecord.accuracy) > parseFloat(oldRecord.accuracy) &&
+            (newRecord.autoPlayUsed === oldRecord.autoPlayUsed ||
+                (oldRecord.autoPlayUsed && !newRecord.autoPlayUsed))) {
+            return true;
+        }
 
         // Update if got full combo and didn't have it before
-        return !!(newRecord.isFullCombo && !oldRecord.isFullCombo);
+        return !!(newRecord.isFullCombo && !oldRecord.isFullCombo &&
+            (newRecord.autoPlayUsed === oldRecord.autoPlayUsed ||
+                (oldRecord.autoPlayUsed && !newRecord.autoPlayUsed)));
     }
 
     async saveVolumeSettings(volumeSettings) {
@@ -157,6 +175,23 @@ class PlayerDataManager {
             const request = store.get(songId);
 
             request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getNonAutoPlayRecords() {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.STORE_NAME], 'readonly');
+            const store = transaction.objectStore(PlayerDataManager.STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                // Filter out auto-play records
+                const records = request.result.filter(record => !record.autoPlayUsed);
+                resolve(records);
+            };
             request.onerror = () => reject(request.error);
         });
     }
