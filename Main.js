@@ -122,9 +122,16 @@ async function initializeGame(canvas, ctx) {
                 try {
                     const keyBindings = window.settingsUI.getKeyBindings();
                     window.gameManager.updateKeyBindings(keyBindings);
-                    console.log('Applied custom key bindings:', keyBindings);
+
+                    // Also apply FPS display setting
+                    window.gameManager.showFps = window.settingsUI.showFpsDisplay || false;
+
+                    console.log('Applied settings to game manager:', {
+                        keyBindings,
+                        showFps: window.gameManager.showFps
+                    });
                 } catch (error) {
-                    console.error('Error applying key bindings:', error);
+                    console.error('Error applying settings:', error);
                 }
             }
 

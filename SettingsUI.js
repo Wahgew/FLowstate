@@ -12,6 +12,9 @@ class SettingsUI {
         this.isVisible = false;
         this.zenModeActive = false;
 
+        // Track FPS display state
+        this.showFpsDisplay = false;
+
         // Key binding related properties
         this.currentKeyBindings = {
             lane1: 's',
@@ -104,6 +107,19 @@ class SettingsUI {
                         </div>
                     </div>
                 </div>
+                
+                <div class="settings-section">
+                <h2>Display Options</h2>
+                    <div class="options-container">
+                        <div class="toggle-option">
+                            <span>Show FPS Counter</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="fpsToggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="settings-section">
                     <h2>Game Options</h2>
@@ -156,6 +172,29 @@ class SettingsUI {
                 this.hideSettingsPanel();
             }
         });
+
+        // Add FPS toggle event listener
+        const fpsToggle = document.getElementById('fpsToggle');
+        if (fpsToggle) {
+            // Set initial state
+            fpsToggle.checked = this.showFpsDisplay;
+
+            // Add change listener
+            fpsToggle.addEventListener('change', () => {
+                this.showFpsDisplay = fpsToggle.checked;
+
+                // Update game manager if it exists
+                if (window.gameManager) {
+                    const isEnabled = window.gameManager.toggleFpsDisplay();
+                    // Keep our setting in sync
+                    this.showFpsDisplay = isEnabled;
+                    fpsToggle.checked = isEnabled;
+                }
+
+                // Save the setting
+                this.saveSettings();
+            });
+        }
     }
 
     toggleSettingsPanel() {
@@ -399,6 +438,21 @@ class SettingsUI {
                 this.applyZenMode();
             }
 
+            if (gameSettings) {
+                this.showFpsDisplay = gameSettings.showFps || false;
+
+                // Update the toggle checkbox
+                const fpsToggle = document.getElementById('fpsToggle');
+                if (fpsToggle) {
+                    fpsToggle.checked = this.showFpsDisplay;
+                }
+
+                // Apply setting to game manager if it exists
+                if (window.gameManager) {
+                    window.gameManager.showFps = this.showFpsDisplay;
+                }
+            }
+
             // Update UI to match loaded settings
             this.updateAllKeyBindingButtons();
             this.updateZenModeButton();
@@ -416,7 +470,8 @@ class SettingsUI {
 
             // Save other game settings
             await this.playerDataManager.saveGameSettings({
-                zenMode: this.zenModeActive
+                zenMode: this.zenModeActive,
+                showFps: this.showFpsDisplay
             });
 
             // Update the current game if it's running

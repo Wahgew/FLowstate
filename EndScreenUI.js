@@ -174,12 +174,31 @@ class EndScreenUI {
             );
         }
 
-        // Draw return instruction
+        // Draw a button-like shape for the restart option
+        const buttonWidth = 400;
+        const buttonHeight = 50;
+        const buttonX = (this.canvas.width - buttonWidth) / 2;
+        const buttonY = this.canvas.height - 80;
+
+        // Draw button background with subtle glow
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 8);
+        this.ctx.fill();
+
+        // Draw button border
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 8);
+        this.ctx.stroke();
+
+        // Draw return instruction with click option
         this.ctx.font = '24px nunito';
         this.ctx.fillStyle = 'white';
-        this.ctx.fillText('Press ENTER to restart',
+        this.ctx.fillText('Press ENTER or Click to continue',
             this.canvas.width / 2,
-            this.canvas.height - 60
+            buttonY + 35
         );
     }
 

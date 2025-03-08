@@ -42,9 +42,20 @@ class SongLoader {
         { id: 'among_trees', title: 'Tussle Among Trees', difficulty: 1.0, path: './songs/Tussle_Among_Trees.osu'},
         { id: 'the_light', title: 'The Light', difficulty: 1.0, path: './songs/the_light.osu'},
         { id: 'mizuoto_curtain', title: 'Mizuoto to Curtain', difficulty: 1.0, path: './songs/Mizuoto_to_Curtain.osu'},
-
-
-
+        { id: 'lonely_go', title: 'Lonely Go!', difficulty: 2.0, path: './songs/Lonely_Go.osu'},
+        { id: 'snowman', title: 'Snowman', difficulty: 2.0, path: './songs/Snowman.osu'},
+        { id: '757', title: '757 Remix', difficulty: 3.0, path: './songs/757.osu'},
+        { id: 'hana_natte', title: 'Hana ni Natte', difficulty: 5.0, path: './songs/Hana_ni_Natte.osu'},
+        { id: 'unwelcome_school', title: 'Unwelcome School', difficulty: 4.0, path: './songs/Unwelcome_School.osu'},
+        { id: 'cant_say_it_back', title: 'Can\'t Say It Back', difficulty: 3.0, path: './songs/Cant_Say_It_Back.osu'},
+        { id: 'by_your_side', title: 'By Your Side', difficulty: 2.0, path: './songs/By_Your_Side.osu'},
+        { id: 'think_abt_it', title: 'Think Abt It', difficulty: 1.0, path: './songs/think_abt_it.osu'},
+        { id: 'hawatari_nioku_centi', title: 'HAWATARI NIOKU', difficulty: 1.0, path: './songs/HAWATARI_NIOKU_CENTI.osu'},
+        { id: 'rocket_to_your_heart', title: 'Rocket to Your Heart', difficulty: 2.0, path: './songs/fly_a_rocket_to_your_heart.osu'},
+        { id: 'drive_real_fast', title: 'Drive Real Fast', difficulty: 1.0, path: './songs/drive_real_fast.osu'},
+        { id: 'beyond', title: 'BEYOND', difficulty: 1.0, path: './songs/BEYOND.osu'},
+        { id: 'valkyrius0', title: 'Valkyrius0', difficulty: 2.0, path: './songs/Valkyrius0.osu'},
+        { id: 'bones', title: 'Bones', difficulty: 1.0, path: './songs/Bones.osu'},
 
 
 

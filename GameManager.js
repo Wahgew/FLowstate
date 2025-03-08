@@ -25,6 +25,17 @@ class GameManager {
             totalNotes: 0
         };
 
+        // Add live accuracy tracking
+        this.liveAccuracy = 0.00;
+
+        // Add FPS tracking (in game)
+        this.fpsUpdateInterval = 500; // Update FPS display every 500ms
+        this.lastFpsUpdate = 0;
+        this.frameCount = 0;
+        this.currentFps = 0;
+        this.showFps = false; // Default to not showing FPS
+
+
         // FPS control
         this.targetFPS = 60;
         this.frameInterval = 1000 / this.targetFPS; // Time between frames in ms
@@ -107,6 +118,7 @@ class GameManager {
 
         this.hitTextDuration = 500;
         this.hitTextTimers = new Map();
+        this.hitTextAnimations = new Map(); // Track animation properties for each hit text
 
         // Track pressed keys for visual feedback
         this.pressedKeys = new Set();
@@ -384,6 +396,8 @@ class GameManager {
             return;
         }
 
+        this.canvas.style.cursor = 'default';
+        this.hitTextAnimations.clear();
         // Cleanup old notes
         this.lanes.forEach(lane => {
             // Remove notes that are way past the hit zone
@@ -394,13 +408,20 @@ class GameManager {
             });
         });
 
-        // Clear old hit text timers
+        // Ensure hit text timers are properly cleared
         this.hitTextTimers.forEach((timer, key) => {
             clearTimeout(timer);
             this.hitTextTimers.delete(key);
+
+            // Also clear the hit text for this lane
+            const lane = this.lanes.find(l => l.key === key);
+            if (lane) {
+                lane.hitText = '';
+                lane.hitTextColor = '';
+            }
         });
 
-        // Clear hit positions array if it's getting too large
+        // Clear auto-play hit positions if it's getting too large
         if (this.autoPlayHitPositions.length > 100) {
             this.autoPlayHitPositions = this.autoPlayHitPositions.slice(-50);
         }
@@ -454,6 +475,13 @@ class GameManager {
         this.drawStartMenu();
     }
 
+    // toggle FPS display
+    toggleFpsDisplay() {
+        this.showFps = !this.showFps;
+        console.log(`FPS display ${this.showFps ? 'enabled' : 'disabled'}`);
+        return this.showFps;
+    }
+
     handleNoteHit(lane) {
         if (!lane.notes.length) return;
 
@@ -475,21 +503,37 @@ class GameManager {
         const timeDiffMs = closestTimeDiff * 1000;
 
         if (closestNote && timeDiffMs <= this.timingWindows.bad) {
+            let pointsAwarded = 0;
+
             if (timeDiffMs <= this.timingWindows.perfect) {
                 this.showHitText(lane, 'PERFECT', '#00ff00');
-                this.score += 300;
+                pointsAwarded = 300;
                 this.currentCombo++;
                 this.stats.perfectCount++;
             } else if (timeDiffMs <= this.timingWindows.good) {
                 this.showHitText(lane, 'GOOD', '#ffff00');
-                this.score += 150;
+                pointsAwarded = 150;
                 this.currentCombo++;
                 this.stats.goodCount++;
             } else {
                 this.showHitText(lane, 'BAD', '#ff6666');
-                this.score += 50;
+                pointsAwarded = 50;
                 this.currentCombo++;
                 this.stats.badCount++;
+            }
+
+            // Update the score
+            this.score += pointsAwarded;
+
+            // Update live accuracy
+            const totalNotes = this.stats.perfectCount + this.stats.goodCount + this.stats.badCount + this.stats.missCount;
+            const totalPoints = this.stats.perfectCount * 300 + this.stats.goodCount * 150 + this.stats.badCount * 50;
+            const maxPossiblePoints = totalNotes * 300;
+
+            if (maxPossiblePoints > 0) {
+                this.liveAccuracy = (totalPoints / maxPossiblePoints) * 100;
+            } else {
+                this.liveAccuracy = 100.00;
             }
 
             // Update max combo
@@ -502,20 +546,36 @@ class GameManager {
 
     // Modified showHitText to handle misses
     showHitText(lane, text, color) {
+        // Set the hit text and color
         lane.hitText = text;
         lane.hitTextColor = color;
 
-        // Clear text timer for this lane
+        // Clear any existing timer for this lane
         if (this.hitTextTimers.has(lane.key)) {
             clearTimeout(this.hitTextTimers.get(lane.key));
+            this.hitTextTimers.delete(lane.key);
         }
 
-        // Set new timer to clear the hit text
+        // Initialize animation properties
+        this.hitTextAnimations.set(lane.key, {
+            startTime: performance.now(),
+            opacity: 1.0,
+            scale: 1.0,
+            offsetY: 0  // We'll move the text up slightly during animation
+        });
+
+        // Create a timer to clear the text after the duration
         const timer = setTimeout(() => {
+            // Clear the text
             lane.hitText = '';
+            lane.hitTextColor = '';
+            // Remove animation data
+            this.hitTextAnimations.delete(lane.key);
+            // Remove the timer
             this.hitTextTimers.delete(lane.key);
         }, this.hitTextDuration);
 
+        // Store the timer reference
         this.hitTextTimers.set(lane.key, timer);
     }
 
@@ -556,7 +616,45 @@ class GameManager {
             this.drawCenteredText(this.currentCombo.toString(), 400, '40px');
         }
 
+        // Draw accuracy in the top right corner
+        this.ctx.textAlign = 'right';
+        this.ctx.font = '24px nunito';
+
+        // Choose color based on accuracy with pastel colors
+        if (this.liveAccuracy >= 95) {
+            this.ctx.fillStyle = '#90EE90'; // Pastel green for excellent accuracy
+        } else if (this.liveAccuracy >= 85) {
+            this.ctx.fillStyle = '#FFD700'; // Soft gold for good accuracy
+        } else if (this.liveAccuracy >= 70) {
+            this.ctx.fillStyle = '#FFB6C1'; // Light pink for okay accuracy
+        } else {
+            this.ctx.fillStyle = '#FF9B9B'; // Pastel coral/red for poor accuracy
+        }
+
+        // Format accuracy to 2 decimal places
+        const formattedAccuracy = this.liveAccuracy.toFixed(2);
+        this.ctx.fillText(`${formattedAccuracy}%`, this.canvas.width - 20, 60);
+
         this.drawTimer();
+
+        // Draw FPS counter if enabled
+        if (this.showFps) {
+            // Update counter every fpsUpdateInterval ms
+            const currentTime = performance.now();
+            this.frameCount++;
+
+            if (currentTime - this.lastFpsUpdate >= this.fpsUpdateInterval) {
+                // Calculate FPS
+                this.currentFps = Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate));
+                this.frameCount = 0;
+                this.lastFpsUpdate = currentTime;
+            }
+
+            // Display FPS
+            this.ctx.font = '16px nunito';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctx.fillText(`${this.currentFps} FPS`, this.canvas.width - 80, 90);
+        }
 
         // Draw key hints
         this.ctx.font = '20px nunito';
@@ -697,17 +795,84 @@ class GameManager {
 
     drawHitText() {
         this.ctx.textAlign = 'center';
-        this.ctx.font = 'bold 15px nunito'; // Change font size to 36px
+        this.ctx.font = 'bold 24px nunito';
+
+        const currentTime = performance.now();
 
         this.lanes.forEach(lane => {
             if (lane.hitText) {
                 const centerX = lane.x + (this.laneWidth / 2);
-                this.ctx.fillStyle = lane.hitTextColor;
-                this.ctx.fillText(lane.hitText, centerX, this.hitZoneY - 150);
+                const baseY = this.hitZoneY - 150;
+
+                // Get animation properties
+                let animation = this.hitTextAnimations.get(lane.key);
+                if (!animation) {
+                    // If no animation data (shouldn't happen), create default
+                    animation = {
+                        startTime: currentTime,
+                        opacity: 1.0,
+                        scale: 1.0,
+                        offsetY: 0
+                    };
+                }
+
+                // Calculate progress (0.0 to 1.0)
+                const elapsed = currentTime - animation.startTime;
+                const progress = Math.min(1.0, elapsed / this.hitTextDuration);
+
+                // Update animation properties based on progress
+                animation.opacity = 1.0 - progress * 0.7; // Fade to 0.3 opacity
+                animation.scale = 1.0 - progress * 0.2;   // Shrink to 0.8 scale
+                animation.offsetY = -progress * 20;       // Move up by 20 pixels
+
+                // Apply animation
+                this.ctx.save();
+
+                // Position at center of lane with offset
+                this.ctx.translate(centerX, baseY + animation.offsetY);
+                this.ctx.scale(animation.scale, animation.scale);
+
+                // Set opacity
+                this.ctx.globalAlpha = animation.opacity;
+
+                // Draw the hit judgment text
+                switch (lane.hitText) {
+                    case 'PERFECT':
+                        this.ctx.fillStyle = '#00ff00'; // Bright green
+                        break;
+                    case 'GOOD':
+                        this.ctx.fillStyle = '#ffff00'; // Yellow
+                        break;
+                    case 'BAD':
+                        this.ctx.fillStyle = '#ff6666'; // Light red
+                        break;
+                    case 'MISS':
+                        this.ctx.fillStyle = '#ff0000'; // Red
+                        break;
+                    default:
+                        this.ctx.fillStyle = lane.hitTextColor || 'white';
+                }
+
+                // Draw with subtle glow effect
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                this.ctx.shadowBlur = 4;
+                this.ctx.shadowOffsetX = 2;
+                this.ctx.shadowOffsetY = 2;
+
+                this.ctx.fillText(lane.hitText, 0, 0);
+
+                // Reset shadow
+                this.ctx.shadowBlur = 0;
+                this.ctx.shadowOffsetX = 0;
+                this.ctx.shadowOffsetY = 0;
+
+                // Restore context (resets transformations and alpha)
+                this.ctx.restore();
             }
         });
 
-        this.ctx.textAlign = 'left'; // Reset text align for score
+        this.ctx.textAlign = 'left'; // Reset text align
+        this.ctx.globalAlpha = 1.0;  // Reset alpha
     }
 
     // Draw centered text
@@ -757,6 +922,7 @@ class GameManager {
     }
 
     drawStartMenu() {
+        this.canvas.style.cursor = 'pointer';
         // Clear canvas with black background
         this.ctx.fillStyle = 'black';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -902,11 +1068,22 @@ class GameManager {
                     lane.notes.splice(i, 1);
                     this.playMissSound();
 
+                    // Update accuracy calculation for misses - make sure this runs
+                    // Note that misses contribute 0 points to the score
+                    const totalNotes = this.stats.perfectCount + this.stats.goodCount + this.stats.badCount + this.stats.missCount;
+                    const totalPoints = this.stats.perfectCount * 300 + this.stats.goodCount * 150 + this.stats.badCount * 50;
+                    const maxPossiblePoints = totalNotes * 300;
+
+                    if (maxPossiblePoints > 0) {
+                        this.liveAccuracy = (totalPoints / maxPossiblePoints) * 100;
+                    }
+
                     console.log('Note missed:', {
                         targetTime: note.targetTime,
                         currentTime: currentTime,
                         timeDiff: timeDiff,
-                        lane: lane.key
+                        lane: lane.key,
+                        accuracy: this.liveAccuracy.toFixed(2)
                     });
                 }
             }
@@ -950,6 +1127,28 @@ class GameManager {
             });
         }
     }
+
+    // updates accuracy in game
+    updateLiveAccuracy() {
+        const totalNotes = this.stats.perfectCount + this.stats.goodCount + this.stats.badCount + this.stats.missCount;
+        const totalPoints = this.stats.perfectCount * 300 + this.stats.goodCount * 150 + this.stats.badCount * 50;
+        const maxPossiblePoints = totalNotes * 300;
+
+        if (maxPossiblePoints > 0) {
+            this.liveAccuracy = (totalPoints / maxPossiblePoints) * 100;
+        } else {
+            this.liveAccuracy = 0.00; // Start at 0 when no notes have been judged yet
+        }
+
+        console.log('Accuracy updated:', {
+            perfect: this.stats.perfectCount,
+            good: this.stats.goodCount,
+            bad: this.stats.badCount,
+            miss: this.stats.missCount,
+            accuracy: this.liveAccuracy.toFixed(2)
+        });
+    }
+
 
 // Modified gameLoop with proper frame limiting
     gameLoop(timestamp) {
@@ -1034,6 +1233,18 @@ class GameManager {
 
         this.showingEndScreen = true;
 
+        // Make sure to clear all hit text
+        this.lanes.forEach(lane => {
+            lane.hitText = '';
+            lane.hitTextColor = '';
+        });
+
+        // Clear all hit text timers
+        this.hitTextTimers.forEach((timer, key) => {
+            clearTimeout(timer);
+        });
+        this.hitTextTimers.clear();
+
         // *** IMPORTANT: Remove the gameplay key listeners when showing end screen ***
         if (this.keydownListener) {
             document.removeEventListener('keydown', this.keydownListener);
@@ -1101,30 +1312,57 @@ class GameManager {
             document.removeEventListener('keydown', this.endScreenKeyListener);
         }
 
-        // Create a dedicated listener for the end screen
+        // Remove any existing click listener
+        if (this.endScreenClickListener) {
+            this.canvas.removeEventListener('click', this.endScreenClickListener);
+        }
+
+        // Make cursor pointer on end screen to indicate clickable
+        this.canvas.style.cursor = 'pointer';
+
+        // Create a dedicated listener for the end screen keyboard input
         this.endScreenKeyListener = (event) => {
             if (event.key === 'Enter') {
                 console.log('Enter key pressed on end screen, returning to song select');
-
-                // Handle end screen input through the EndScreenUI
-                if (this.endScreenUI.handleInput(event)) {
-                    // Clean up the end screen listener
-                    document.removeEventListener('keydown', this.endScreenKeyListener);
-                    this.endScreenKeyListener = null;
-
-                    // Call the song select callback
-                    if (this.onSongSelect) {
-                        this.onSongSelect();
-                    } else {
-                        this.handleRestart();
-                    }
-                }
+                this.handleEndScreenExit();
             }
         };
 
-        // Add the end screen listener
+        // Create a dedicated click listener for the end screen
+        this.endScreenClickListener = () => {
+            console.log('Click detected on end screen, returning to song select');
+            this.handleEndScreenExit();
+        };
+
+        // Add the listeners
         document.addEventListener('keydown', this.endScreenKeyListener);
+        this.canvas.addEventListener('click', this.endScreenClickListener);
+
         console.log('End screen controls set up');
+    }
+
+    // helper method to handle end screen exit logic
+    handleEndScreenExit() {
+        // Clean up the end screen listeners
+        if (this.endScreenKeyListener) {
+            document.removeEventListener('keydown', this.endScreenKeyListener);
+            this.endScreenKeyListener = null;
+        }
+
+        if (this.endScreenClickListener) {
+            this.canvas.removeEventListener('click', this.endScreenClickListener);
+            this.endScreenClickListener = null;
+        }
+
+        // Handle the EndScreenUI input event
+        if (this.endScreenUI && this.endScreenUI.handleInput({ key: 'Enter' })) {
+            // Call the song select callback
+            if (this.onSongSelect) {
+                this.onSongSelect();
+            } else {
+                this.handleRestart();
+            }
+        }
     }
 
     playHitSound(key) {
@@ -1208,15 +1446,28 @@ class GameManager {
             this.endScreenKeyListener = null;
         }
 
+        // Remove dev mode listener if it exists
+        if (this.devModeListener) {
+            document.removeEventListener('keypress', this.devModeListener);
+        }
+
         // Cancel animation frame
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
 
+        // Reset cursor to default
+        this.canvas.style.cursor = 'default';
+
         // Clear all timeouts
         this.noteSpawnTimers.forEach(timer => clearTimeout(timer));
         this.noteSpawnTimers = [];
+
+        // Clear hit text timers
+        this.hitTextTimers.forEach(timer => clearTimeout(timer));
+        this.hitTextTimers.clear();
+        this.hitTextAnimations.clear();
 
         // Wait for any pending note spawn promises to resolve
         await Promise.all(this.noteSpawnPromises);
@@ -1336,9 +1587,9 @@ class GameManager {
     }
 
     setupDevModeToggle() {
-        // Listen for key presses to detect the dev mode sequence
-        document.addEventListener('keypress', (e) => {
-            // Only check before game starts
+        // Create a non-game related keypress listener for dev mode
+        const devModeListener = (e) => {
+            // Only check before game starts and not during gameplay
             if (this.gameStarted) return;
 
             const key = e.key.toLowerCase();
@@ -1365,7 +1616,13 @@ class GameManager {
                 // Reset sequence if wrong key pressed
                 this.currentSequenceIndex = 0;
             }
-        });
+        };
+
+        // Add the listener with a separate reference so it doesn't interfere with gameplay
+        document.addEventListener('keypress', devModeListener);
+
+        // Store reference for cleanup
+        this.devModeListener = devModeListener;
     }
 
     startGame() {
@@ -1375,6 +1632,9 @@ class GameManager {
         }
 
         this.gameStarted = true;
+
+        // Set cursor to default during gameplay
+        this.canvas.style.cursor = 'default';
 
         // Initialize song length and timer
         this.music.addEventListener('loadedmetadata', () => {
