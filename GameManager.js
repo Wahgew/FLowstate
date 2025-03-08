@@ -47,6 +47,12 @@ class GameManager {
         }
 
         this.lanes = [];
+        this.keyBindings = {
+            lane1: 's',
+            lane2: 'd',
+            lane3: 'k',
+            lane4: 'l'
+        };
         this.noteSpawnTimers = [];
         this.noteCount = 0;
         this.gameTimer = 0;
@@ -184,12 +190,15 @@ class GameManager {
         // Reset auto-play index
         this.autoPlayNextNoteIndex = 0;
 
+        // Initialize lanes with custom key bindings
+        const laneKeys = [this.keyBindings.lane1, this.keyBindings.lane2, this.keyBindings.lane3, this.keyBindings.lane4];
+
         // Initialize lanes and spawn notes
         this.songData.sheet.forEach((laneData, index) => {
             const lane = {
                 x: offsetX + (index * this.laneWidth),
                 y: 0,
-                key: ['s', 'd', 'k', 'l'][index],
+                key: laneKeys[index],
                 hitText: '',
                 notes: []
             };
@@ -862,6 +871,35 @@ class GameManager {
         this.lastFrameTime = performance.now();
     }
 
+    updateKeyBindings(newBindings) {
+        console.log('Updating key bindings to:', newBindings);
+        this.keyBindings = { ...newBindings };
+
+        // Update existing lanes if they exist
+        if (this.lanes && this.lanes.length === 4) {
+            this.lanes[0].key = this.keyBindings.lane1;
+            this.lanes[1].key = this.keyBindings.lane2;
+            this.lanes[2].key = this.keyBindings.lane3;
+            this.lanes[3].key = this.keyBindings.lane4;
+
+            console.log('Updated lane keys:', this.lanes.map(lane => lane.key));
+        }
+
+        // Update hit sounds map with new keys
+        if (this.hitSounds) {
+            // Clear existing hit sounds
+            this.hitSounds.clear();
+
+            // Create new hit sounds for each key
+            const laneKeys = [this.keyBindings.lane1, this.keyBindings.lane2, this.keyBindings.lane3, this.keyBindings.lane4];
+            laneKeys.forEach(key => {
+                const audio = new Audio('./effects/hitsound.wav');
+                audio.volume = this.hitSoundVolume;
+                this.hitSounds.set(key, audio);
+            });
+        }
+    }
+
 // Modified gameLoop with proper frame limiting
     gameLoop(timestamp) {
         if (!this.isRunning) return;
@@ -1284,4 +1322,8 @@ class GameManager {
 // Create and initialize the game when the window loads
 window.onload = function() {
     window.gameManager = new GameManager();  // Set gameManager globally
+    if (window.settingsUI) {
+        const keyBindings = window.settingsUI.getKeyBindings();
+        window.gameManager.updateKeyBindings(keyBindings);
+    }
 };

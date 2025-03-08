@@ -28,6 +28,11 @@ body {
     outline: none;
 }
 
+/* Hide the buttons that are now in the settings menu */
+#resetScoresButton, #helpButton, #fullscreenButton {
+    display: none;
+}
+
 /* Button styles */
 #fullscreenButton, #resetScoresButton {
     position: absolute;
@@ -118,6 +123,73 @@ body {
 .confirm-no {
     background: #666;
     color: white;
+}
+
+/* Sound Button */
+.sound-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 90;
+    transition: background-color 0.2s;
+}
+
+.sound-button:hover {
+    background-color: #555;
+}
+
+/* Updated Volume Controls */
+.volume-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(30, 30, 30, 0.95);
+    padding: 15px;
+    border-radius: 10px;
+    z-index: 95;
+    width: 300px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.volume-collapsed {
+    transform: translateY(-20px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.close-volume-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.volume-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #555;
+}
+
+.volume-header h3 {
+    margin: 0;
+    font-size: 18px;
 }
 
 /* Volume controls */
@@ -311,4 +383,218 @@ body {
 
 .help-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* Settings button */
+.settings-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: #555;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.settings-button:hover {
+    background-color: #777;
+}
+
+/* Settings panel */
+.settings-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.settings-content {
+    background-color: #222;
+    width: 80%;
+    max-width: 700px;
+    max-height: 80vh;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #333;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.settings-header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.settings-section {
+    margin: 20px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 20px;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.settings-section h2 {
+    margin-top: 0;
+    font-size: 22px;
+    color: #ccc;
+}
+
+/* Key binding styles */
+.key-bindings {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.key-binding-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.key-binding-button {
+    background-color: #444;
+    border: 2px solid #666;
+    border-radius: 5px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    padding: 8px 20px;
+    min-width: 120px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.key-binding-confirmed {
+    animation: confirmBind 0.5s ease-out forwards;
+}
+
+.key-binding-button:hover {
+    background-color: #555;
+    border-color: #888;
+}
+
+.key-binding-button.rebinding {
+    background-color: #775500;
+    border-color: #ffaa00;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { border-color: #ffaa00; }
+    50% { border-color: #ffdd00; }
+    100% { border-color: #ffaa00; }
+}
+
+/* Add a small animation for key binding confirmation */
+@keyframes confirmBind {
+    0% { background-color: #775500; }
+    50% { background-color: #25a025; }
+    100% { background-color: #444; }
+}
+
+.secondary-button {
+    background-color: #444;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    padding: 8px 15px;
+    cursor: pointer;
+}
+
+.secondary-button:hover {
+    background-color: #555;
+}
+
+/* Options styles */
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.options-button {
+    background-color: #444;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    padding: 10px 15px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.options-button:hover {
+    background-color: #555;
+}
+
+.danger-button {
+    background-color: rgba(180, 30, 30, 0.7);
+}
+
+.danger-button:hover {
+    background-color: rgba(220, 30, 30, 0.8);
+}
+
+/* Zen Mode Styles */
+.zen-mode .volume-controls,
+.zen-mode #fullscreenButton,
+.zen-mode #resetScoresButton,
+.zen-mode #helpButton {
+    display: none !important;
+}
+
+.zen-mode .settings-button {
+    opacity: 0.03;
+    transition: opacity 0.3s ease;
+}
+
+.zen-mode .settings-button:hover {
+    opacity: 1;
+}
+
+/* Hide sound button */
+.zen-mode .sound-button {
+    opacity: 0.03;
+    transition: opacity 0.3s ease;
+}
+
+.zen-mode .sound-button:hover {
+    opacity: 1;
 }

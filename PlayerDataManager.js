@@ -1,7 +1,6 @@
-// PlayerDataManager.js
 class PlayerDataManager {
     static DB_NAME = 'RhythmGameDB';
-    static DB_VERSION = 1;
+    static DB_VERSION = 2; // Important: Increment the version to trigger an upgrade
     static STORE_NAME = 'songRecords';
     static SETTINGS_STORE = 'gameSettings';
 
@@ -124,8 +123,6 @@ class PlayerDataManager {
 
         // Update if got full combo and didn't have it before
         return !!(newRecord.isFullCombo && !oldRecord.isFullCombo);
-
-
     }
 
     async saveVolumeSettings(volumeSettings) {
@@ -233,6 +230,100 @@ class PlayerDataManager {
             const request = store.clear();
 
             request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // Methods for key bindings and game settings
+    async saveKeyBindings(keyBindings) {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readwrite');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+
+            const request = store.put({
+                id: 'keyBindings',
+                lane1: keyBindings.lane1,
+                lane2: keyBindings.lane2,
+                lane3: keyBindings.lane3,
+                lane4: keyBindings.lane4,
+                timestamp: Date.now()
+            });
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getKeyBindings() {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readonly');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+            const request = store.get('keyBindings');
+
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve({
+                        lane1: request.result.lane1,
+                        lane2: request.result.lane2,
+                        lane3: request.result.lane3,
+                        lane4: request.result.lane4
+                    });
+                } else {
+                    // Return default key bindings if none found
+                    resolve({
+                        lane1: 's',
+                        lane2: 'd',
+                        lane3: 'k',
+                        lane4: 'l'
+                    });
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async saveGameSettings(settings) {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readwrite');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+
+            const request = store.put({
+                id: 'gameSettings',
+                zenMode: settings.zenMode,
+                timestamp: Date.now()
+            });
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getGameSettings() {
+        if (!this.db) await this.initializeDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([PlayerDataManager.SETTINGS_STORE], 'readonly');
+            const store = transaction.objectStore(PlayerDataManager.SETTINGS_STORE);
+            const request = store.get('gameSettings');
+
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve({
+                        zenMode: request.result.zenMode || false
+                    });
+                } else {
+                    // Return default settings if none found
+                    resolve({
+                        zenMode: false
+                    });
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }

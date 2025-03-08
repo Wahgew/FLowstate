@@ -1,6 +1,151 @@
-/**
- * game-controls.js - Controls and UI interactions for Flowstate rhythm game
- */
+// Make the setupCollapsibleVolumeControls function available globally
+window.setupCollapsibleVolumeControls = function() {
+    const volumeControls = document.querySelector('.volume-controls');
+    if (!volumeControls) return; // Exit if volume controls don't exist yet
+
+    // Create a sound button that toggles volume controls
+    const soundButton = document.createElement('button');
+    soundButton.id = 'soundButton';
+    soundButton.innerHTML = '🔊';
+    soundButton.className = 'sound-button';
+    soundButton.title = 'Sound Settings';
+
+    // Create a close button for the volume panel
+    const closeVolumeButton = document.createElement('button');
+    closeVolumeButton.className = 'close-volume-button';
+    closeVolumeButton.innerHTML = '×';
+    closeVolumeButton.title = 'Close';
+
+    // Add the close button to volume controls
+    volumeControls.prepend(closeVolumeButton);
+
+    // Add the sound button to the container
+    const gameContainer = document.getElementById('gameContainer');
+    if (gameContainer) {
+        gameContainer.appendChild(soundButton);
+    }
+
+    // Toggle volume controls when clicking the sound button
+    soundButton.addEventListener('click', function() {
+        volumeControls.classList.remove('volume-collapsed');
+    });
+
+    // Hide volume controls when clicking the close button
+    closeVolumeButton.addEventListener('click', function() {
+        volumeControls.classList.add('volume-collapsed');
+    });
+
+    console.log('Collapsible volume controls initialized');
+};
+
+// Set up event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing controls');
+
+    // DO NOT initialize sound button here - it will be done after welcome screen
+    // Instead, just set up the other controls
+
+    // Event listeners for fullscreen
+    window.addEventListener('resize', resizeGame);
+    document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+    });
+
+    // Reset scores functionality
+    const resetScoresButton = document.getElementById('resetScoresButton');
+    const confirmationDialog = document.getElementById('confirmationDialog');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+
+    if (resetScoresButton) {
+        resetScoresButton.addEventListener('click', () => {
+            if (confirmationDialog) {
+                confirmationDialog.style.display = 'block';
+            }
+        });
+    }
+
+    if (confirmYes) {
+        confirmYes.addEventListener('click', async () => {
+            if (window.playerDataManager) {
+                await window.playerDataManager.clearAllRecords();
+                // Refresh the song selection UI if it's visible
+                if (window.gameManager && window.gameManager.onSongSelect) {
+                    window.gameManager.onSongSelect();
+                }
+            }
+            if (confirmationDialog) {
+                confirmationDialog.style.display = 'none';
+            }
+        });
+    }
+
+    if (confirmNo) {
+        confirmNo.addEventListener('click', () => {
+            if (confirmationDialog) {
+                confirmationDialog.style.display = 'none';
+            }
+        });
+    }
+
+    // Close dialog if clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === confirmationDialog) {
+            confirmationDialog.style.display = 'none';
+        }
+    });
+
+    // Help panel functionality
+    const helpButton = document.getElementById('helpButton');
+    const helpPanel = document.getElementById('helpPanel');
+    const closeHelpButton = document.getElementById('closeHelpButton');
+
+    // Show help panel
+    if (helpButton && helpPanel) {
+        helpButton.addEventListener('click', function() {
+            helpPanel.style.display = 'flex';
+
+            // If game is running, pause it
+            if (window.gameManager && window.gameManager.isRunning) {
+                window.gameManager.music.pause();
+            }
+        });
+    }
+
+    // Hide help panel
+    if (closeHelpButton && helpPanel) {
+        closeHelpButton.addEventListener('click', function() {
+            helpPanel.style.display = 'none';
+
+            // If game was running, resume it
+            if (window.gameManager && window.gameManager.isRunning) {
+                window.gameManager.music.play();
+            }
+        });
+    }
+
+    // Close help panel with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && helpPanel && helpPanel.style.display === 'flex') {
+            helpPanel.style.display = 'none';
+
+            // If game was running, resume it
+            if (window.gameManager && window.gameManager.isRunning) {
+                window.gameManager.music.play();
+            }
+        }
+    });
+
+    // Volume control setup
+    setupVolumeControls();
+
+    // Initial resize
+    resizeGame();
+});
 
 // Resolution handling
 function resizeGame() {
@@ -31,99 +176,16 @@ function toggleFullscreen() {
     }
 }
 
-// Set up event listeners when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Event listeners for fullscreen
-    window.addEventListener('resize', resizeGame);
-    document.getElementById('fullscreenButton').addEventListener('click', toggleFullscreen);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F11') {
-            e.preventDefault();
-            toggleFullscreen();
-        }
-    });
-
-    // Reset scores functionality
-    const resetScoresButton = document.getElementById('resetScoresButton');
-    const confirmationDialog = document.getElementById('confirmationDialog');
-    const confirmYes = document.getElementById('confirmYes');
-    const confirmNo = document.getElementById('confirmNo');
-
-    resetScoresButton.addEventListener('click', () => {
-        confirmationDialog.style.display = 'block';
-    });
-
-    confirmYes.addEventListener('click', async () => {
-        if (window.playerDataManager) {
-            await window.playerDataManager.clearAllRecords();
-            // Refresh the song selection UI if it's visible
-            if (window.gameManager && window.gameManager.onSongSelect) {
-                window.gameManager.onSongSelect();
-            }
-        }
-        confirmationDialog.style.display = 'none';
-    });
-
-    confirmNo.addEventListener('click', () => {
-        confirmationDialog.style.display = 'none';
-    });
-
-    // Close dialog if clicking outside
-    window.addEventListener('click', (e) => {
-        if (e.target === confirmationDialog) {
-            confirmationDialog.style.display = 'none';
-        }
-    });
-
-    // Help panel functionality
-    const helpButton = document.getElementById('helpButton');
-    const helpPanel = document.getElementById('helpPanel');
-    const closeHelpButton = document.getElementById('closeHelpButton');
-
-    // Show help panel
-    helpButton.addEventListener('click', function() {
-        helpPanel.style.display = 'flex';
-
-        // If game is running, pause it
-        if (window.gameManager && window.gameManager.isRunning) {
-            window.gameManager.music.pause();
-        }
-    });
-
-    // Hide help panel
-    closeHelpButton.addEventListener('click', function() {
-        helpPanel.style.display = 'none';
-
-        // If game was running, resume it
-        if (window.gameManager && window.gameManager.isRunning) {
-            window.gameManager.music.play();
-        }
-    });
-
-    // Close help panel with Escape key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape' && helpPanel.style.display === 'flex') {
-            helpPanel.style.display = 'none';
-
-            // If game was running, resume it
-            if (window.gameManager && window.gameManager.isRunning) {
-                window.gameManager.music.play();
-            }
-        }
-    });
-
-    // Volume control setup
-    setupVolumeControls();
-
-    // Initial resize
-    resizeGame();
-});
-
 // Volume control functionality
 function setupVolumeControls() {
     const songVolumeSlider = document.getElementById('songVolumeSlider');
     const hitSoundVolumeSlider = document.getElementById('hitSoundVolumeSlider');
     const missSoundVolumeSlider = document.getElementById('missSoundVolumeSlider');
+
+    if (!songVolumeSlider || !hitSoundVolumeSlider || !missSoundVolumeSlider) {
+        console.error('Volume sliders not found');
+        return;
+    }
 
     const songVolumeValue = document.getElementById('songVolumeValue');
     const hitSoundVolumeValue = document.getElementById('hitSoundVolumeValue');
@@ -147,9 +209,9 @@ function setupVolumeControls() {
                 window.volumeState.missSoundVolume = missSoundVolumeSlider.value / 100;
 
                 // Update display values
-                songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-                hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
-                missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
+                if (songVolumeValue) songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+                if (hitSoundVolumeValue) hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+                if (missSoundVolumeValue) missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
 
                 // Update game manager if it exists
                 if (window.gameManager) {
@@ -170,9 +232,9 @@ function setupVolumeControls() {
     }
 
     // Add event listeners for all volume sliders
-    songVolumeSlider.addEventListener('input', updateVolumes);
-    hitSoundVolumeSlider.addEventListener('input', updateVolumes);
-    missSoundVolumeSlider.addEventListener('input', updateVolumes);
+    if (songVolumeSlider) songVolumeSlider.addEventListener('input', updateVolumes);
+    if (hitSoundVolumeSlider) hitSoundVolumeSlider.addEventListener('input', updateVolumes);
+    if (missSoundVolumeSlider) missSoundVolumeSlider.addEventListener('input', updateVolumes);
 
     // Store volume preferences in localStorage
     function saveVolumePreferences() {
@@ -194,26 +256,26 @@ function setupVolumeControls() {
         const savedHitSoundVolume = localStorage.getItem('hitSoundVolume');
         const savedMissSoundVolume = localStorage.getItem('missSoundVolume');
 
-        if (savedSongVolume !== null) {
+        if (savedSongVolume !== null && songVolumeSlider) {
             songVolumeSlider.value = savedSongVolume;
         }
-        if (savedHitSoundVolume !== null) {
+        if (savedHitSoundVolume !== null && hitSoundVolumeSlider) {
             hitSoundVolumeSlider.value = savedHitSoundVolume;
         }
-        if (savedMissSoundVolume !== null) {
+        if (savedMissSoundVolume !== null && missSoundVolumeSlider) {
             missSoundVolumeSlider.value = savedMissSoundVolume;
         }
 
         // Update the volume values in UI
-        songVolumeValue.textContent = `${songVolumeSlider.value}%`;
-        hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
-        missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
+        if (songVolumeValue && songVolumeSlider) songVolumeValue.textContent = `${songVolumeSlider.value}%`;
+        if (hitSoundVolumeValue && hitSoundVolumeSlider) hitSoundVolumeValue.textContent = `${hitSoundVolumeSlider.value}%`;
+        if (missSoundVolumeValue && missSoundVolumeSlider) missSoundVolumeValue.textContent = `${missSoundVolumeSlider.value}%`;
     }
 
     // Save volumes when changed
-    songVolumeSlider.addEventListener('change', saveVolumePreferences);
-    hitSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
-    missSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
+    if (songVolumeSlider) songVolumeSlider.addEventListener('change', saveVolumePreferences);
+    if (hitSoundVolumeSlider) hitSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
+    if (missSoundVolumeSlider) missSoundVolumeSlider.addEventListener('change', saveVolumePreferences);
 
     // Load saved volumes when page loads
     loadVolumePreferences();

@@ -13,7 +13,10 @@
     <canvas id="gameWorld" width="1920" height="1080" tabindex="0" autofocus></canvas>
 
     <!-- Volume Controls -->
-    <div class="volume-controls">
+    <div class="volume-controls volume-collapsed">
+        <div class="volume-header">
+            <h3>Sound Settings</h3>
+        </div>
         <div class="volume-group">
             <div class="volume-label">
                 <span>Music Volume</span>
@@ -151,10 +154,30 @@
                     <li><strong>Miss Sound Volume:</strong> Controls the volume of miss sounds</li>
                 </ul>
             </div>
+
+            <div class="help-section">
+                <h2>Performance Tips</h2>
+                <p><strong>Refresh Rate:</strong> This game performs best on monitors with higher refresh rates (above 60Hz). While the game is playable at 60Hz, the gameplay experience is much smoother on 120Hz, 144Hz, or higher refresh rate displays.</p>
+                <p><strong>Hardware:</strong> For optimal performance, use a dedicated graphics card and ensure your system meets these recommended specifications:</p>
+                <ul>
+                    <li>Modern CPU (any from the last 10 years should be fine)</li>
+                    <li>At least 4GB of RAM</li>
+                    <li>Any dedicated GPU or modern integrated graphics</li>
+                    <li>Use an up-to-date browser (Chrome or Brave recommended)</li>
+                </ul>
+                <p><strong>Settings:</strong> For the best gameplay experience:</p>
+                <ul>
+                    <li>Play in Fullscreen mode (F11 or Settings → Fullscreen)</li>
+                    <li>Use Zen Mode (F9 or Settings → Zen Mode) for minimal distractions</li>
+                    <li>Adjust key bindings to a comfortable position for your hands</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Settings Scripts -->
+<script type="text/javascript" src="SettingsUI.js"></script>
 <!-- Game Scripts -->
 <script type="text/javascript" src="OsuParse.js"></script>
 <script type="text/javascript" src="PlayerDataManager.js"></script>

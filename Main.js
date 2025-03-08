@@ -45,6 +45,24 @@ async function initializeGame(canvas, ctx) {
     window.playerDataManager = playerData;
     drawLoadingScreen(ctx, 20, 'Player Data Loaded');
 
+    drawLoadingScreen(ctx, 23, 'Initializing Settings...');
+    // Initialize Settings UI with playerData reference
+    try {
+        window.settingsUI = new SettingsUI(playerData);
+        window.settingsUI.init();
+        drawLoadingScreen(ctx, 35, 'Settings Initialized');
+        console.log('Settings UI initialized successfully');
+    } catch (error) {
+        console.error('Error initializing settings UI:', error);
+        drawLoadingScreen(ctx, 35, 'Settings Error');
+    }
+
+    // Now that we're past the welcome screen, initialize the sound button
+    if (window.setupCollapsibleVolumeControls) {
+        window.setupCollapsibleVolumeControls();
+        console.log('Sound controls initialized');
+    }
+
     // Load volume settings from PlayerDataManager
     drawLoadingScreen(ctx, 25, 'Loading Settings...');
     const volumeSettings = await playerData.getVolumeSettings();
@@ -98,6 +116,17 @@ async function initializeGame(canvas, ctx) {
             window.gameManager.setSongVolume(window.volumeState.songVolume);
             window.gameManager.setHitSoundVolume(window.volumeState.hitSoundVolume);
             window.gameManager.setMissSoundVolume(window.volumeState.missSoundVolume);
+
+            // update key bindings
+            if (window.settingsUI) {
+                try {
+                    const keyBindings = window.settingsUI.getKeyBindings();
+                    window.gameManager.updateKeyBindings(keyBindings);
+                    console.log('Applied custom key bindings:', keyBindings);
+                } catch (error) {
+                    console.error('Error applying key bindings:', error);
+                }
+            }
 
             window.gameManager.onSongSelect = () => {
                 window.gameManager.music.pause();
