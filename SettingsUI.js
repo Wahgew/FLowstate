@@ -427,10 +427,11 @@ class SettingsUI {
                 this.currentKeyBindings = keyBindings;
             }
 
-            // Load zen mode setting
+            // Load game settings
             const gameSettings = await this.playerDataManager.getGameSettings();
             if (gameSettings) {
                 this.zenModeActive = gameSettings.zenMode || false;
+                this.showFpsDisplay = gameSettings.showFps || false; // Load FPS display setting
             }
 
             // Apply zen mode if active
@@ -438,19 +439,10 @@ class SettingsUI {
                 this.applyZenMode();
             }
 
-            if (gameSettings) {
-                this.showFpsDisplay = gameSettings.showFps || false;
-
-                // Update the toggle checkbox
-                const fpsToggle = document.getElementById('fpsToggle');
-                if (fpsToggle) {
-                    fpsToggle.checked = this.showFpsDisplay;
-                }
-
-                // Apply setting to game manager if it exists
-                if (window.gameManager) {
-                    window.gameManager.showFps = this.showFpsDisplay;
-                }
+            // Update the FPS toggle checkbox
+            const fpsToggle = document.getElementById('fpsToggle');
+            if (fpsToggle) {
+                fpsToggle.checked = this.showFpsDisplay;
             }
 
             // Update UI to match loaded settings
@@ -471,12 +463,13 @@ class SettingsUI {
             // Save other game settings
             await this.playerDataManager.saveGameSettings({
                 zenMode: this.zenModeActive,
-                showFps: this.showFpsDisplay
+                showFps: this.showFpsDisplay // Save FPS display setting
             });
 
             // Update the current game if it's running
             if (window.gameManager) {
                 window.gameManager.updateKeyBindings(this.currentKeyBindings);
+                window.gameManager.showFps = this.showFpsDisplay; // Update FPS display
             }
         } catch (error) {
             console.error('Failed to save settings:', error);

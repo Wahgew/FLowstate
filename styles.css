@@ -128,7 +128,7 @@ body {
 /* Sound Button */
 .sound-button {
     position: absolute;
-    top: 20px;
+    bottom: 20px;
     left: 20px;
     background-color: #444;
     color: white;
@@ -149,7 +149,7 @@ body {
 /* Updated Volume Controls */
 .volume-controls {
     position: absolute;
-    top: 20px;
+    bottom: 70px; /* Position above the sound button */
     left: 20px;
     background-color: rgba(30, 30, 30, 0.95);
     padding: 15px;
@@ -158,10 +158,17 @@ body {
     width: 300px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     transition: transform 0.3s ease, opacity 0.3s ease;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+/* Make sure the volume controls are properly sized when expanded */
+.volume-controls:not(.volume-collapsed) {
+    height: auto;
 }
 
 .volume-collapsed {
-    transform: translateY(-20px);
+    transform: translateY(-20px); /* Changed to move upward when collapsed */
     opacity: 0;
     pointer-events: none;
 }
@@ -190,19 +197,6 @@ body {
 .volume-header h3 {
     margin: 0;
     font-size: 18px;
-}
-
-/* Volume controls */
-.volume-controls {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 2;
-    width: 200px;
 }
 
 .volume-group {
@@ -389,7 +383,7 @@ body {
 .settings-button {
     position: absolute;
     top: 20px;
-    right: 20px;
+    left: 20px;
     background-color: #555;
     padding: 8px 15px;
     border: none;
@@ -402,6 +396,7 @@ body {
     align-items: center;
     gap: 5px;
 }
+
 
 .settings-button:hover {
     background-color: #777;

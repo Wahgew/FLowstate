@@ -331,6 +331,7 @@ class PlayerDataManager {
             const request = store.put({
                 id: 'gameSettings',
                 zenMode: settings.zenMode,
+                showFps: settings.showFps || false, // Add showFps setting
                 timestamp: Date.now()
             });
 
@@ -350,12 +351,14 @@ class PlayerDataManager {
             request.onsuccess = () => {
                 if (request.result) {
                     resolve({
-                        zenMode: request.result.zenMode || false
+                        zenMode: request.result.zenMode || false,
+                        showFps: request.result.showFps || false // Include showFps in results
                     });
                 } else {
                     // Return default settings if none found
                     resolve({
-                        zenMode: false
+                        zenMode: false,
+                        showFps: false
                     });
                 }
             };
