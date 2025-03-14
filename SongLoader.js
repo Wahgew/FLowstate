@@ -4,6 +4,8 @@ class SongLoader {
         this.isLoading = true;
         this.loadingProgress = 0;
         this.onProgressUpdate = null;
+        this.sortBy = 'difficulty'; // Default sort by difficulty
+        this.sortDirection = 'asc'; // Default sort direction ascending
     }
 
     // List of all available songs
@@ -67,9 +69,13 @@ class SongLoader {
 
         try {
             const totalSongs = SongLoader.songList.length;
+            // Default sort by difficulty ascending
+            SongLoader.songList.sort((a, b) => a.difficulty - b.difficulty);
 
             for (let i = 0; i < totalSongs; i++) {
                 const song = SongLoader.songList[i];
+
+
                 const response = await fetch(song.path);
                 const osuContent = await response.text();
                 const songData = loadOsuFile(osuContent);
@@ -96,6 +102,34 @@ class SongLoader {
         }
     }
 
+    // Add a method to handle sorting
+    sortSongs(sortBy, direction) {
+        this.sortBy = sortBy;
+        this.sortDirection = direction;
+
+        console.log(`Sorting songs by ${sortBy} in ${direction} order`);
+
+        // Sort the actual songs array that's being displayed
+        if (sortBy === 'difficulty') {
+            this.songs.sort((a, b) => {
+                return direction === 'asc'
+                    ? a.difficulty - b.difficulty
+                    : b.difficulty - a.difficulty;
+            });
+        } else if (sortBy === 'title') {
+            this.songs.sort((a, b) => {
+                return direction === 'asc'
+                    ? a.title.localeCompare(b.title)
+                    : b.title.localeCompare(a.title);
+            });
+        }
+
+        console.log("Songs sorted. First 3 songs are now:",
+            this.songs.slice(0, 3).map(s => `${s.title} (${s.difficulty})`));
+
+        // Return copy of songs for UI refresh
+        return [...this.songs];
+    }
 
     getSongById(id) {
         return this.songs.find(song => song.id === id);

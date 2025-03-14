@@ -29,6 +29,32 @@ class SongSelectUI {
         // Animation frame request ID
         this.animationFrameId = null;
 
+        // Sort button properties
+        this.sortButtons = {
+            difficulty: {
+                x: this.canvas.width / 2 - 280,
+                y: 25,
+                width: 120,
+                height: 30,
+                direction: 'asc',
+                label: 'Difficulty ↑'
+            },
+            title: {
+                x: this.canvas.width / 2 + 150,
+                y: 25,
+                width: 120,
+                height: 30,
+                direction: 'asc',
+                label: 'Title ↑'
+            }
+        };
+        // Active sort state
+        this.activeSortBy = 'difficulty';
+
+        // Add animation flag for sort transitions
+        this.isSortAnimating = false;
+        this.sortAnimationProgress = 0;
+
         // Load all song records when initializing
         this.loadSongRecords();
 
@@ -46,6 +72,105 @@ class SongSelectUI {
         } catch (error) {
             console.error('Failed to load song records:', error);
         }
+    }
+
+    setupSortButtons() {
+        this.canvas.addEventListener('click', (event) => {
+            if (!this.isVisible) return;
+
+            // Get mouse position relative to canvas
+            const rect = this.canvas.getBoundingClientRect();
+            const scale = this.canvas.width / rect.width;
+            const mouseX = (event.clientX - rect.left) * scale;
+            const mouseY = (event.clientY - rect.top) * scale;
+
+            // Check if clicked on difficulty sort button
+            const diffBtn = this.sortButtons.difficulty;
+            if (mouseX >= diffBtn.x && mouseX <= diffBtn.x + diffBtn.width &&
+                mouseY >= diffBtn.y && mouseY <= diffBtn.y + diffBtn.height) {
+
+                // Toggle direction if already active
+                if (this.activeSortBy === 'difficulty') {
+                    diffBtn.direction = diffBtn.direction === 'asc' ? 'desc' : 'asc';
+                    diffBtn.label = `Difficulty ${diffBtn.direction === 'asc' ? '↑' : '↓'}`;
+                } else {
+                    this.activeSortBy = 'difficulty';
+                    // Update title button appearance
+                    const titleBtn = this.sortButtons.title;
+                    titleBtn.label = `Title ${titleBtn.direction === 'asc' ? '↑' : '↓'}`;
+                }
+
+                // Remember current selected song
+                const songs = this.songLoader.getAllSongs();
+                const currentSong = songs[this.selectedIndex];
+
+                // Apply sort
+                this.songLoader.sortSongs('difficulty', diffBtn.direction);
+
+                console.log("Applied difficulty sort:", {
+                    direction: diffBtn.direction,
+                    selectedSong: currentSong.title,
+                    firstVisibleSongs: this.songLoader.getAllSongs().slice(0, 5).map(s => s.title)
+                });
+
+                // Find the new index of the selected song
+                const newSongs = this.songLoader.getAllSongs();
+                const newIndex = newSongs.findIndex(song => song.id === currentSong.id);
+
+                // Update selected index and start animation
+                if (newIndex !== -1) {
+                    this.selectedIndex = newIndex;
+                }
+
+                // Play sound and trigger sort animation
+                this.playScrollSound();
+                this.startSortAnimation();
+
+                return;
+            }
+
+            // Check if clicked on title sort button
+            const titleBtn = this.sortButtons.title;
+            if (mouseX >= titleBtn.x && mouseX <= titleBtn.x + titleBtn.width &&
+                mouseY >= titleBtn.y && mouseY <= titleBtn.y + titleBtn.height) {
+
+                // Toggle direction if already active
+                if (this.activeSortBy === 'title') {
+                    titleBtn.direction = titleBtn.direction === 'asc' ? 'desc' : 'asc';
+                    titleBtn.label = `Title ${titleBtn.direction === 'asc' ? '↑' : '↓'}`;
+                } else {
+                    this.activeSortBy = 'title';
+                    // Update difficulty button appearance
+                    const diffBtn = this.sortButtons.difficulty;
+                    diffBtn.label = `Difficulty ${diffBtn.direction === 'asc' ? '↑' : '↓'}`;
+                }
+
+                // Remember current selected song
+                const songs = this.songLoader.getAllSongs();
+                const currentSong = songs[this.selectedIndex];
+
+                // Apply sort
+                this.songLoader.sortSongs('title', titleBtn.direction);
+                console.log("Applied title sort:", {
+                    direction: titleBtn.direction,
+                    selectedSong: currentSong.title,
+                    firstVisibleSongs: this.songLoader.getAllSongs().slice(0, 5).map(s => s.title)
+                });
+
+                // Find the new index of the selected song
+                const newSongs = this.songLoader.getAllSongs();
+                const newIndex = newSongs.findIndex(song => song.id === currentSong.id);
+
+                // Update selected index and start animation
+                if (newIndex !== -1) {
+                    this.selectedIndex = newIndex;
+                }
+
+                // Play sound and trigger sort animation
+                this.playScrollSound();
+                this.startSortAnimation();
+            }
+        });
     }
 
     // Add this method to set up mouse event listeners
@@ -156,6 +281,19 @@ class SongSelectUI {
             }
         });
 
+        // Also check if mouse is over sort buttons for hover effect
+        const diffBtn = this.sortButtons.difficulty;
+        if (this.mousePosition.x >= diffBtn.x && this.mousePosition.x <= diffBtn.x + diffBtn.width &&
+            this.mousePosition.y >= diffBtn.y && this.mousePosition.y <= diffBtn.y + diffBtn.height) {
+            this.canvas.style.cursor = 'pointer';
+        }
+
+        const titleBtn = this.sortButtons.title;
+        if (this.mousePosition.x >= titleBtn.x && this.mousePosition.x <= titleBtn.x + titleBtn.width &&
+            this.mousePosition.y >= titleBtn.y && this.mousePosition.y <= titleBtn.y + titleBtn.height) {
+            this.canvas.style.cursor = 'pointer';
+        }
+
         // Reset cursor if not over any song
         if (!this.isMouseOverSong) {
             this.canvas.style.cursor = 'default';
@@ -187,7 +325,9 @@ class SongSelectUI {
 
     show() {
         this.isVisible = true;
+        this.initializeRoundRectPolyfill();
         this.loadSongRecords().then(() => {
+            this.setupSortButtons();
             this.startAnimationLoop();
             this.updateSoundVolume();
             this.draw();
@@ -246,6 +386,29 @@ class SongSelectUI {
         });
     }
 
+    // Add method to trigger sort animation
+    startSortAnimation() {
+        this.isSortAnimating = true;
+        this.sortAnimationProgress = 0;
+
+        // Define animation frames
+        const animateSortTransition = () => {
+            this.sortAnimationProgress += 0.08; // Control speed here
+
+            if (this.sortAnimationProgress >= 1) {
+                this.isSortAnimating = false;
+            } else {
+                requestAnimationFrame(animateSortTransition);
+            }
+
+            // Redraw UI with each animation frame
+            this.draw();
+        };
+
+        // Start animation
+        animateSortTransition();
+    }
+
     startAnimationLoop() {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
@@ -254,12 +417,14 @@ class SongSelectUI {
         const animate = () => {
             if (!this.isVisible) return;
 
-            if (this.isAnimating) {
+            if (this.isAnimating || this.isSortAnimating) {
                 // Update animation progress
-                this.animationProgress += this.animationSpeed;
-                if (this.animationProgress >= 1) {
-                    this.animationProgress = 0;
-                    this.isAnimating = false;
+                if (this.isAnimating) {
+                    this.animationProgress += this.animationSpeed;
+                    if (this.animationProgress >= 1) {
+                        this.animationProgress = 0;
+                        this.isAnimating = false;
+                    }
                 }
 
                 this.draw();
@@ -284,11 +449,28 @@ class SongSelectUI {
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Song Selection', this.canvas.width / 2, 60);
 
+        // Draw sort buttons
+        this.drawSortButtons();
+
         // Get visible songs with their original indices
         const visibleSongs = this.getVisibleSongs();
 
-        // Draw song boxes
+        // Determine fade effect for sort animation
+        let opacity = 1;
+        if (this.isSortAnimating) {
+            // Fade out then in during sort animation (quick pulse)
+            if (this.sortAnimationProgress < 0.5) {
+                opacity = Math.max(0.7, 1 - this.sortAnimationProgress);
+            } else {
+                opacity = Math.min(1, 0.7 + (this.sortAnimationProgress - 0.5) * 2);
+            }
+        }
+
+        // Draw song boxes with potential fade effect
+        this.ctx.globalAlpha = opacity;
+
         visibleSongs.forEach((song, visibleIndex) => {
+            // Draw song boxes with existing code
             const originalIndex = song.originalIndex !== undefined ? song.originalIndex : visibleIndex;
             const y = this.getYPosition(visibleIndex);
 
@@ -352,6 +534,9 @@ class SongSelectUI {
             }
         });
 
+        // Reset opacity
+        this.ctx.globalAlpha = 1;
+
         // Draw scroll indicators if there are more songs than visible area
         const songs = this.songLoader.getAllSongs();
         if (songs.length > this.visibleSongsCount) {
@@ -385,6 +570,110 @@ class SongSelectUI {
         this.ctx.lineTo(centerX, bottomY + 15);
         this.ctx.closePath();
         this.ctx.fill();
+    }
+
+    // Add method to draw sort buttons
+    drawSortButtons() {
+        // Set up text and button styles
+        this.ctx.font = '16px nunito';
+
+        // Draw difficulty sort button
+        const diffBtn = this.sortButtons.difficulty;
+
+        // Check if mouse is hovering over difficulty button
+        const isDiffHovered = this.mousePosition.x >= diffBtn.x &&
+            this.mousePosition.x <= diffBtn.x + diffBtn.width &&
+            this.mousePosition.y >= diffBtn.y &&
+            this.mousePosition.y <= diffBtn.y + diffBtn.height;
+
+        // Base color with hover effect
+        if (this.activeSortBy === 'difficulty') {
+            this.ctx.fillStyle = isDiffHovered ? '#666' : '#555'; // Brighter when hovered
+        } else {
+            this.ctx.fillStyle = isDiffHovered ? '#444' : '#333'; // Brighter when hovered
+        }
+
+        // Draw button with rounded corners for a more polished look
+        this.ctx.beginPath();
+        this.ctx.roundRect(diffBtn.x, diffBtn.y, diffBtn.width, diffBtn.height, 5);
+        this.ctx.fill();
+
+        // Add glow effect if this is the active sort and animating
+        if (this.isSortAnimating && this.activeSortBy === 'difficulty') {
+            // Calculate glow opacity based on animation progress (fade in, then out)
+            const glowOpacity = this.sortAnimationProgress < 0.5
+                ? this.sortAnimationProgress * 2
+                : (1 - this.sortAnimationProgress) * 2;
+
+            this.ctx.shadowColor = `rgba(255, 255, 255, ${glowOpacity})`;
+            this.ctx.shadowBlur = 15;
+        }
+
+        // Button border
+        this.ctx.strokeStyle = this.activeSortBy === 'difficulty' ? '#fff' : '#555';
+        this.ctx.lineWidth = this.activeSortBy === 'difficulty' ? 2 : 1;
+        this.ctx.stroke();
+
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+
+        // Button text with shadow for better readability
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.shadowBlur = 2;
+        this.ctx.fillStyle = 'white';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(diffBtn.label, diffBtn.x + diffBtn.width/2, diffBtn.y + diffBtn.height/2 + 5);
+        this.ctx.shadowBlur = 0;
+
+        // Draw title sort button with same enhancements
+        const titleBtn = this.sortButtons.title;
+
+        // Check if mouse is hovering over title button
+        const isTitleHovered = this.mousePosition.x >= titleBtn.x &&
+            this.mousePosition.x <= titleBtn.x + titleBtn.width &&
+            this.mousePosition.y >= titleBtn.y &&
+            this.mousePosition.y <= titleBtn.y + titleBtn.height;
+
+        // Base color with hover effect
+        if (this.activeSortBy === 'title') {
+            this.ctx.fillStyle = isTitleHovered ? '#666' : '#555';
+        } else {
+            this.ctx.fillStyle = isTitleHovered ? '#444' : '#333';
+        }
+
+        // Draw button with rounded corners
+        this.ctx.beginPath();
+        this.ctx.roundRect(titleBtn.x, titleBtn.y, titleBtn.width, titleBtn.height, 5);
+        this.ctx.fill();
+
+        // Add glow effect if this is the active sort and animating
+        if (this.isSortAnimating && this.activeSortBy === 'title') {
+            // Calculate glow opacity based on animation progress (fade in, then out)
+            const glowOpacity = this.sortAnimationProgress < 0.5
+                ? this.sortAnimationProgress * 2
+                : (1 - this.sortAnimationProgress) * 2;
+
+            this.ctx.shadowColor = `rgba(255, 255, 255, ${glowOpacity})`;
+            this.ctx.shadowBlur = 15;
+        }
+
+        // Button border
+        this.ctx.strokeStyle = this.activeSortBy === 'title' ? '#fff' : '#555';
+        this.ctx.lineWidth = this.activeSortBy === 'title' ? 2 : 1;
+        this.ctx.stroke();
+
+        // Reset shadow
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+
+        // Button text with shadow
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.shadowBlur = 2;
+        this.ctx.fillStyle = 'white';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(titleBtn.label, titleBtn.x + titleBtn.width/2, titleBtn.y + titleBtn.height/2 + 5);
+        this.ctx.shadowBlur = 0;
     }
 
     handleInput(event) {
@@ -455,12 +744,42 @@ class SongSelectUI {
         return songs[this.selectedIndex];
     }
 
+    // Add polyfill for roundRect if needed
+    initializeRoundRectPolyfill() {
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                if (radius === undefined) radius = 5;
+
+                this.beginPath();
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.arcTo(x + width, y, x + width, y + radius, radius);
+                this.lineTo(x + width, y + height - radius);
+                this.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+                this.lineTo(x + radius, y + height);
+                this.arcTo(x, y + height, x, y + height - radius, radius);
+                this.lineTo(x, y + radius);
+                this.arcTo(x, y, x + radius, y, radius);
+                this.closePath();
+                return this;
+            };
+        }
+    }
+
     getVisibleSongs() {
         const songs = this.songLoader.getAllSongs();
         const totalSongs = songs.length;
+        // console.log("Getting visible songs, total songs:",
+        //     songs.length,
+        //     "First 3:",
+        //     songs.slice(0, 3).map(s => s.title));
+
 
         if (totalSongs <= this.visibleSongsCount) {
-            return songs; // Return all songs if we have fewer than visible count
+            return songs.map((song, index) => ({
+                ...song,
+                originalIndex: index
+            }));
         }
 
         // Get the visible range of indices
@@ -471,6 +790,7 @@ class SongSelectUI {
         for (let i = 0; i < this.visibleSongsCount; i++) {
             let index = (startIndex + i) % totalSongs;
             if (index < 0) index += totalSongs; // Handle negative indices
+
             visibleSongs.push({
                 ...songs[index],
                 originalIndex: index // Store the original index for selection
