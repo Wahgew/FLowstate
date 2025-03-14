@@ -57,7 +57,11 @@ class SongLoader {
         { id: 'drive_real_fast', title: 'Drive Real Fast', difficulty: 1.0, path: './songs/drive_real_fast.osu'},
         { id: 'beyond', title: 'BEYOND', difficulty: 1.0, path: './songs/BEYOND.osu'},
         { id: 'valkyrius0', title: 'Valkyrius0', difficulty: 2.0, path: './songs/Valkyrius0.osu'},
-        { id: 'bones', title: 'Bones', difficulty: 1.0, path: './songs/Bones.osu'},
+        { id: 'make_a_move', title: 'Make a Move', difficulty: 1.0, path: './songs/Make_a_Move.osu'},
+        { id: 'alice_garden', title: 'Alice in Garden', difficulty: 2.0, path: './songs/Alice_in_Garden.osu'},
+        { id: 'najimi_breakers', title: 'Najimi Breakers', difficulty: 3.0, path: './songs/najimi_breakers.osu'},
+        { id: 'encounter', title: 'Encounter', difficulty: 2.0, path: './songs/Encounter.osu'},
+
 
 
 

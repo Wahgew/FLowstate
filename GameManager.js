@@ -723,24 +723,24 @@ class GameManager {
             `Max Score: ${this.allNoteTimings.length * 300}`
         ];
 
-        debugInfo.forEach((text, index) => {
-            this.ctx.fillText(text, 10, 300 + (index * 18));
-        });
+        // debugInfo.forEach((text, index) => {
+        //     this.ctx.fillText(text, 10, 300 + (index * 18));
+        // });
 
-        // Draw horizontal line at visual hit position
-        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        this.ctx.setLineDash([5, 5]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, this.visualHitZoneY);
-        this.ctx.lineTo(this.canvas.width, this.visualHitZoneY);
-        this.ctx.stroke();
-
-        // Draw fainter line at mechanics hit position
-        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, this.hitZoneY);
-        this.ctx.lineTo(this.canvas.width, this.hitZoneY);
-        this.ctx.stroke();
+        // // Draw horizontal line at visual hit position
+        // this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        // this.ctx.setLineDash([5, 5]);
+        // this.ctx.beginPath();
+        // this.ctx.moveTo(0, this.visualHitZoneY);
+        // this.ctx.lineTo(this.canvas.width, this.visualHitZoneY);
+        // this.ctx.stroke();
+        //
+        // // Draw fainter line at mechanics hit position
+        // this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+        // this.ctx.beginPath();
+        // this.ctx.moveTo(0, this.hitZoneY);
+        // this.ctx.lineTo(this.canvas.width, this.hitZoneY);
+        // this.ctx.stroke();
 
         this.ctx.setLineDash([]); // Reset line style
     }
