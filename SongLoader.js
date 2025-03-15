@@ -61,10 +61,19 @@ class SongLoader {
         { id: 'alice_garden', title: 'Alice in Garden', difficulty: 2.0, path: './songs/Alice_in_Garden.osu'},
         { id: 'najimi_breakers', title: 'Najimi Breakers', difficulty: 3.0, path: './songs/najimi_breakers.osu'},
         { id: 'encounter', title: 'Encounter', difficulty: 2.0, path: './songs/Encounter.osu'},
+        { id: 'myoukai', title: 'MYOUKAI', difficulty: 1.0, path: './songs/MYOUKAI.osu'},
+        { id: 'mirror', title: 'MirroR', difficulty: 2.0, path: './songs/MirroR.osu'},
+        { id: 'naked', title: 'Naked', difficulty: 1.0, path: './songs/Naked.osu'},
+        { id: 'amen_break', title: 'Amen Break', difficulty: 5.0, path: './songs/Amen_Break.osu'},
+        { id: 'the_earth', title: 'THE EARTH', difficulty: 3.0, path: './songs/THE_EARTH.osu'},
+        { id: 'lost_umbrella', title: 'Lost Umbrella', difficulty: 2.0, path: './songs/Lost_Umbrella.osu'},
+        { id: 'lagtrain', title: 'Lagtrain', difficulty: 2.0, path: './songs/Lagtrain.osu'},
+        { id: 'World_is_Mine', title: 'World is Mine', difficulty: 3.0, path: './songs/World_is_Mine.osu'},
+        { id: 'heart111', title: 'Heart111', difficulty: 2.0, path: './songs/Heart111.osu'},
 
 
 
-
+        //add more songs here
     ];
 
     async loadAllSongs() {
