@@ -9,12 +9,6 @@ class GameManager {
         this.music = new Audio(this.songFile);
         this.music.loop = false;
 
-        // debug initialization
-        // Debug mode configuration
-        this.debugMode = false;
-        this.autoPlay = false;
-        this.gameStarted = false;  // Track if game has started
-
         // Add stats tracking
         this.stats = {
             perfectCount: 0,
@@ -293,7 +287,7 @@ class GameManager {
         this.canvas.addEventListener('click', this.startClickListener);
 
         this.startKeyListener = (event) => {
-            if (event.key === ' ' && !this.gameStarted) {
+            if ((event.key === ' ' || event.key === 'Enter') && !this.gameStarted) {
                 this.startGame();
                 this.canvas.removeEventListener('click', this.startClickListener);
                 document.removeEventListener('keydown', this.startKeyListener);
@@ -306,7 +300,7 @@ class GameManager {
             // Skip all input processing if end screen is showing
             if (this.showingEndScreen) return;
 
-            // Handle F2 for debug mode
+            // Handle F2 for debug mode/autoplay
             if (event.key === 'F2') {
                 if (!this.gameStarted) {
                     this.toggleDebugMode();
@@ -598,7 +592,7 @@ class GameManager {
         this.drawLaneSeparators();
         this.drawGameplayHitZones();
 
-        if (this.debugMode) {
+        if (this.debugMode && this.devModeEnabled) {
             this.drawHitZones();
         }
 
@@ -696,7 +690,7 @@ class GameManager {
 
     // Modified drawHitZones to use debug information
     drawHitZones() {
-        if (!this.debugMode) return;
+        if (!this.debugMode && this.devModeEnabled) return;
 
         // Draw debug info background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -723,24 +717,24 @@ class GameManager {
             `Max Score: ${this.allNoteTimings.length * 300}`
         ];
 
-        // debugInfo.forEach((text, index) => {
-        //     this.ctx.fillText(text, 10, 300 + (index * 18));
-        // });
+        debugInfo.forEach((text, index) => {
+            this.ctx.fillText(text, 10, 300 + (index * 18));
+        });
 
-        // // Draw horizontal line at visual hit position
-        // this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        // this.ctx.setLineDash([5, 5]);
-        // this.ctx.beginPath();
-        // this.ctx.moveTo(0, this.visualHitZoneY);
-        // this.ctx.lineTo(this.canvas.width, this.visualHitZoneY);
-        // this.ctx.stroke();
-        //
-        // // Draw fainter line at mechanics hit position
-        // this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
-        // this.ctx.beginPath();
-        // this.ctx.moveTo(0, this.hitZoneY);
-        // this.ctx.lineTo(this.canvas.width, this.hitZoneY);
-        // this.ctx.stroke();
+        // Draw horizontal line at visual hit position
+        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.visualHitZoneY);
+        this.ctx.lineTo(this.canvas.width, this.visualHitZoneY);
+        this.ctx.stroke();
+
+        // Draw fainter line at mechanics hit position
+        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.hitZoneY);
+        this.ctx.lineTo(this.canvas.width, this.hitZoneY);
+        this.ctx.stroke();
 
         this.ctx.setLineDash([]); // Reset line style
     }
@@ -1554,8 +1548,13 @@ class GameManager {
                 index: this.autoPlayNextNoteIndex
             });
 
-            // If we're within 12ms (0.012 seconds) of the target time
-            if (timeDiff <= 0.020) { // 12ms error
+            // If we're within 20ms (0.020 seconds) of the target time
+            /*
+             * CHANGING THIS VALUES WILL SHIFT THE POSITION OF THE TARGET HIT POSITION
+             * At the current moment the hit position is around y = 940-960 at 0.020 seconds
+             * And visuals at y = 950
+             */
+            if (timeDiff <= 0.020) { // 20ms error // note if I had a better monitor Hz >165Hz this would be 10ms
                 console.log('Auto-play hit triggered:', {
                     hitTime: currentTime.toFixed(3),
                     targetTime: nextNote.time.toFixed(3),
