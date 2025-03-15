@@ -23,7 +23,7 @@ Flowstate is a web-based rhythm game inspired by popular titles like osu!mania, 
 ![Image](https://github.com/user-attachments/assets/b02d2de6-6322-4a5d-9a35-2d8e0ad5ab18)
 
 ### Gameplay
-![Image](https://github.com/user-attachments/assets/8e11171a-ebf1-4640-841e-f1c24bcc0528)
+![flowstate-gameplay-opt](https://github.com/user-attachments/assets/d1a57053-4178-48d2-a9d5-8cd43168e66d)
 
 ### Song Selection
 ![Image](https://github.com/user-attachments/assets/8013e092-2c16-4c9c-b8fb-679087e96016)
