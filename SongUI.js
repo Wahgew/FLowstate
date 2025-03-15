@@ -28,6 +28,7 @@ class SongSelectUI {
 
         // Animation frame request ID
         this.animationFrameId = null;
+        this.eventListenersInitialized = false;
 
         // Sort button properties
         this.sortButtons = {
@@ -51,7 +52,7 @@ class SongSelectUI {
         // Active sort state
         this.activeSortBy = 'difficulty';
 
-        // Add animation flag for sort transitions
+        // Animation flag for sort transitions
         this.isSortAnimating = false;
         this.sortAnimationProgress = 0;
 
@@ -75,6 +76,12 @@ class SongSelectUI {
     }
 
     setupSortButtons() {
+        // Skip if already initialized
+        if (this.eventListenersInitialized) return;
+
+        // Mark as initialized
+        this.eventListenersInitialized = true;
+
         this.canvas.addEventListener('click', (event) => {
             if (!this.isVisible) return;
 
@@ -173,8 +180,11 @@ class SongSelectUI {
         });
     }
 
-    // Add this method to set up mouse event listeners
+    // Method to set up mouse event listeners
     setupMouseListeners() {
+        // Skip if already initialized
+        if (this.eventListenersInitialized) return;
+
         // Mouse move handler for hover effects
         this.canvas.addEventListener('mousemove', (event) => {
             if (!this.isVisible) return;
@@ -247,7 +257,6 @@ class SongSelectUI {
             this.playScrollSound();
             this.draw();
         }, { passive: false }); // Important for preventDefault to work
-
     }
 
     // Method to determine if mouse is over any song
@@ -326,7 +335,10 @@ class SongSelectUI {
     show() {
         this.isVisible = true;
         this.initializeRoundRectPolyfill();
+
         this.loadSongRecords().then(() => {
+            // Set up event listeners only once
+            this.setupMouseListeners();
             this.setupSortButtons();
             this.startAnimationLoop();
             this.updateSoundVolume();
@@ -386,7 +398,7 @@ class SongSelectUI {
         });
     }
 
-    // Add method to trigger sort animation
+    // Method to trigger sort animation
     startSortAnimation() {
         this.isSortAnimating = true;
         this.sortAnimationProgress = 0;
